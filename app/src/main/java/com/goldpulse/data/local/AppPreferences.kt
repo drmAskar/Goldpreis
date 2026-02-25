@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.map
 data class SettingsState(
     val thresholdPercent: Double = 1.0,
     val currency: String = "USD",
+    val currenciesCsv: String = "USD,EUR,AED",
+    val themeName: String = "Purple",
     val checkIntervalMinutes: Int = 10
 )
 
@@ -27,9 +29,12 @@ class AppPreferences(context: Context) {
     )
 
     val settingsFlow: Flow<SettingsState> = dataStore.data.map { prefs ->
+        val savedCurrency = prefs[KEY_CURRENCY] ?: "USD"
         SettingsState(
             thresholdPercent = prefs[KEY_THRESHOLD] ?: 1.0,
-            currency = prefs[KEY_CURRENCY] ?: "USD",
+            currency = savedCurrency,
+            currenciesCsv = prefs[KEY_CURRENCIES] ?: savedCurrency,
+            themeName = prefs[KEY_THEME] ?: "Purple",
             checkIntervalMinutes = prefs[KEY_INTERVAL] ?: 10
         )
     }
@@ -46,6 +51,8 @@ class AppPreferences(context: Context) {
         dataStore.edit { prefs ->
             prefs[KEY_THRESHOLD] = settings.thresholdPercent
             prefs[KEY_CURRENCY] = settings.currency
+            prefs[KEY_CURRENCIES] = settings.currenciesCsv
+            prefs[KEY_THEME] = settings.themeName
             prefs[KEY_INTERVAL] = settings.checkIntervalMinutes
         }
     }
@@ -70,6 +77,8 @@ class AppPreferences(context: Context) {
         private val KEY_THRESHOLD = doublePreferencesKey("threshold_percent")
         private val KEY_CURRENCY = stringPreferencesKey("target_currency")
         private val KEY_INTERVAL = intPreferencesKey("check_interval_minutes")
+        private val KEY_CURRENCIES = stringPreferencesKey("target_currencies_csv")
+        private val KEY_THEME = stringPreferencesKey("theme_name")
         private val KEY_LAST_PRICE = doublePreferencesKey("last_price")
         private val KEY_HISTORY = stringPreferencesKey("price_history_json")
     }

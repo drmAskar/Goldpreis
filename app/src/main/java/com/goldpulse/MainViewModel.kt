@@ -15,10 +15,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class UiState(
     val loading: Boolean = false,
     val currentPrice: Double? = null,
+    val pricesByCurrency: Map<String, Double> = emptyMap(),
+    val lastUpdatedText: String = "",
     val settings: SettingsState = SettingsState(),
     val history: List<PricePoint> = emptyList(),
     val error: String? = null
@@ -53,9 +58,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(loading = true, error = null) }
         runCatching {
             val settings = prefs.settingsFlow.first()
-            val point = repository.fetchCurrentPrice(settings.currency)
-            prefs.saveLastPrice(point.price)
-            prefs.appendHistory(point)
+            val currencies = settings.currenciesCsv
+                .split(',')
+                .map { it.trim().uppercase() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .ifEmpty { listOf("USD") }
+
+            val prices = linkedMapOf<String, Double>()
+            currencies.forEach { c ->
+                prices[c] = repository.fetchCurrentPrice(c).price
+            }
+
+            val primary = currencies.first()
+            val primaryPoint = PricePoint(
+                price = prices[primary] ?: 0.0,
+                timestamp = System.currentTimeMillis() / 1000
+            )
+
+            prefs.saveLastPrice(primaryPoint.price)
+            prefs.appendHistory(primaryPoint)
+
+            val time = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+            _uiState.update {
+                it.copy(
+                    currentPrice = primaryPoint.price,
+                    pricesByCurrency = prices,
+                    lastUpdatedText = time
+                )
+            }
         }.onFailure {
             _uiState.update { state -> state.copy(error = it.message ?: "Unknown error") }
         }
