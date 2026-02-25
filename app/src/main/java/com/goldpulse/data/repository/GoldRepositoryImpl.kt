@@ -8,9 +8,20 @@ class GoldRepositoryImpl(
     private val api: GoldApiService
 ) : GoldRepository {
     override suspend fun fetchCurrentPrice(currency: String): PricePoint {
-        val response = api.getGoldPrice(currency = currency)
+        val response = api.getGoldPrice()
+        val usdPrice = response.price
+        val normalizedCurrency = currency.uppercase()
+
+        val finalPrice = if (normalizedCurrency == "USD") {
+            usdPrice
+        } else {
+            val fx = api.getFxRates("https://api.frankfurter.app/latest?from=USD&to=$normalizedCurrency")
+            val rate = fx.rates[normalizedCurrency] ?: 1.0
+            usdPrice * rate
+        }
+
         return PricePoint(
-            price = response.price,
+            price = finalPrice,
             timestamp = response.timestamp ?: (System.currentTimeMillis() / 1000)
         )
     }
