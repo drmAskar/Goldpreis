@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.goldpulse.R
 import com.goldpulse.data.local.AppPreferences
 import com.goldpulse.data.network.NetworkModule
 import com.goldpulse.data.repository.GoldRepositoryImpl
