@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">GoldPulse</string>
+    <string name="title_trend">الاتجاه</string>
+    <string name="title_settings">الإعدادات</string>
+    <string name="label_threshold">نسبة التنبيه %%</string>
+    <string name="label_currency">العملة</string>
+    <string name="label_interval">فاصل التحقق (دقائق)</string>
+    <string name="action_save">حفظ</string>
+    <string name="action_refresh">تحديث</string>
+
+    <string name="notification_channel_name">تنبيهات الذهب</string>
+    <string name="notification_channel_description">تنبيهات تغير سعر الذهب</string>
+    <string name="notification_title">تنبيه سعر الذهب</string>
+    <string name="notification_body">تغير السعر بنسبة %1$s%%. السعر الحالي: %2$s</string>
+</resources>

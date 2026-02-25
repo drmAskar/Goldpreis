@@ -1,0 +1,76 @@
+package com.goldpulse.data.local
+
+import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.doublePreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStoreFile
+import com.goldpulse.data.model.PricePoint
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+data class SettingsState(
+    val thresholdPercent: Double = 1.0,
+    val currency: String = "USD",
+    val checkIntervalMinutes: Int = 10
+)
+
+class AppPreferences(context: Context) {
+    private val gson = Gson()
+
+    private val dataStore = PreferenceDataStoreFactory.create(
+        produceFile = { context.preferencesDataStoreFile("goldpulse.preferences_pb") }
+    )
+
+    val settingsFlow: Flow<SettingsState> = dataStore.data.map { prefs ->
+        SettingsState(
+            thresholdPercent = prefs[KEY_THRESHOLD] ?: 1.0,
+            currency = prefs[KEY_CURRENCY] ?: "USD",
+            checkIntervalMinutes = prefs[KEY_INTERVAL] ?: 10
+        )
+    }
+
+    val lastPriceFlow: Flow<Double?> = dataStore.data.map { it[KEY_LAST_PRICE] }
+
+    val historyFlow: Flow<List<PricePoint>> = dataStore.data.map { prefs ->
+        val json = prefs[KEY_HISTORY] ?: return@map emptyList()
+        val type = object : TypeToken<List<PricePoint>>() {}.type
+        runCatching { gson.fromJson<List<PricePoint>>(json, type) }.getOrDefault(emptyList())
+    }
+
+    suspend fun updateSettings(settings: SettingsState) {
+        dataStore.edit { prefs ->
+            prefs[KEY_THRESHOLD] = settings.thresholdPercent
+            prefs[KEY_CURRENCY] = settings.currency
+            prefs[KEY_INTERVAL] = settings.checkIntervalMinutes
+        }
+    }
+
+    suspend fun saveLastPrice(price: Double) {
+        dataStore.edit { it[KEY_LAST_PRICE] = price }
+    }
+
+    suspend fun appendHistory(point: PricePoint, maxItems: Int = 60) {
+        dataStore.edit { prefs ->
+            val type = object : TypeToken<List<PricePoint>>() {}.type
+            val current = runCatching {
+                gson.fromJson<List<PricePoint>>(prefs[KEY_HISTORY] ?: "[]", type)
+            }.getOrDefault(emptyList())
+
+            val updated = (current + point).takeLast(maxItems)
+            prefs[KEY_HISTORY] = gson.toJson(updated)
+        }
+    }
+
+    companion object {
+        private val KEY_THRESHOLD = doublePreferencesKey("threshold_percent")
+        private val KEY_CURRENCY = stringPreferencesKey("target_currency")
+        private val KEY_INTERVAL = intPreferencesKey("check_interval_minutes")
+        private val KEY_LAST_PRICE = doublePreferencesKey("last_price")
+        private val KEY_HISTORY = stringPreferencesKey("price_history_json")
+    }
+}

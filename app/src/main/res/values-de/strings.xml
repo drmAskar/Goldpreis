@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">GoldPulse</string>
+    <string name="title_trend">Trend</string>
+    <string name="title_settings">Einstellungen</string>
+    <string name="label_threshold">Alarm-Schwelle %%</string>
+    <string name="label_currency">Währung</string>
+    <string name="label_interval">Prüfintervall (Minuten)</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_refresh">Aktualisieren</string>
+
+    <string name="notification_channel_name">Gold-Benachrichtigungen</string>
+    <string name="notification_channel_description">Preisänderungswarnungen für Gold</string>
+    <string name="notification_title">Goldpreis-Alarm</string>
+    <string name="notification_body">Preis hat sich um %1$s%% geändert. Aktueller Preis: %2$s</string>
+</resources>

@@ -1,0 +1,69 @@
+package com.goldpulse
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.goldpulse.data.local.AppPreferences
+import com.goldpulse.data.local.SettingsState
+import com.goldpulse.data.model.PricePoint
+import com.goldpulse.data.network.NetworkModule
+import com.goldpulse.data.repository.GoldRepositoryImpl
+import com.goldpulse.worker.WorkScheduler
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class UiState(
+    val loading: Boolean = false,
+    val currentPrice: Double? = null,
+    val settings: SettingsState = SettingsState(),
+    val history: List<PricePoint> = emptyList(),
+    val error: String? = null
+)
+
+class MainViewModel(app: Application) : AndroidViewModel(app) {
+    private val prefs = AppPreferences(app.applicationContext)
+    private val repository = GoldRepositoryImpl(NetworkModule.api)
+
+    private val _uiState = MutableStateFlow(UiState())
+    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+
+    init {
+        observeSettings()
+        observeHistory()
+        refreshPrice()
+    }
+
+    private fun observeSettings() = viewModelScope.launch {
+        prefs.settingsFlow.collect { settings ->
+            _uiState.update { it.copy(settings = settings) }
+        }
+    }
+
+    private fun observeHistory() = viewModelScope.launch {
+        prefs.historyFlow.collect { history ->
+            _uiState.update { it.copy(history = history, currentPrice = history.lastOrNull()?.price ?: it.currentPrice) }
+        }
+    }
+
+    fun refreshPrice() = viewModelScope.launch {
+        _uiState.update { it.copy(loading = true, error = null) }
+        runCatching {
+            val settings = prefs.settingsFlow.first()
+            val point = repository.fetchCurrentPrice(settings.currency)
+            prefs.saveLastPrice(point.price)
+            prefs.appendHistory(point)
+        }.onFailure {
+            _uiState.update { state -> state.copy(error = it.message ?: "Unknown error") }
+        }
+        _uiState.update { it.copy(loading = false) }
+    }
+
+    fun updateSettings(settings: SettingsState) = viewModelScope.launch {
+        prefs.updateSettings(settings)
+        WorkScheduler.start(getApplication(), settings.checkIntervalMinutes.toLong())
+    }
+}
