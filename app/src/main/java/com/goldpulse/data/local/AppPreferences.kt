@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -18,7 +19,8 @@ data class SettingsState(
     val currency: String = "USD",
     val currenciesCsv: String = "USD,EUR,AED",
     val themeName: String = "Purple",
-    val checkIntervalMinutes: Int = 10
+    val checkIntervalMinutes: Int = 10,
+    val backgroundNotificationsEnabled: Boolean = true
 )
 
 class AppPreferences(context: Context) {
@@ -35,7 +37,8 @@ class AppPreferences(context: Context) {
             currency = savedCurrency,
             currenciesCsv = prefs[KEY_CURRENCIES] ?: savedCurrency,
             themeName = prefs[KEY_THEME] ?: "Purple",
-            checkIntervalMinutes = prefs[KEY_INTERVAL] ?: 10
+            checkIntervalMinutes = prefs[KEY_INTERVAL] ?: 10,
+            backgroundNotificationsEnabled = prefs[KEY_BG_ENABLED] ?: true
         )
     }
 
@@ -54,6 +57,7 @@ class AppPreferences(context: Context) {
             prefs[KEY_CURRENCIES] = settings.currenciesCsv
             prefs[KEY_THEME] = settings.themeName
             prefs[KEY_INTERVAL] = settings.checkIntervalMinutes
+            prefs[KEY_BG_ENABLED] = settings.backgroundNotificationsEnabled
         }
     }
 
@@ -81,5 +85,6 @@ class AppPreferences(context: Context) {
         private val KEY_THEME = stringPreferencesKey("theme_name")
         private val KEY_LAST_PRICE = doublePreferencesKey("last_price")
         private val KEY_HISTORY = stringPreferencesKey("price_history_json")
+        private val KEY_BG_ENABLED = booleanPreferencesKey("background_notifications_enabled")
     }
 }

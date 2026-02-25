@@ -2,11 +2,21 @@
     <string name="app_name">GoldPulse</string>
     <string name="title_trend">Trend</string>
     <string name="title_settings">Settings</string>
+    <string name="open_settings">Open settings</string>
+    <string name="last_update">Last update: %1$s</string>
     <string name="label_threshold">Alert threshold %%</string>
     <string name="label_currency">Currency</string>
+    <string name="label_currencies">Currencies</string>
+    <string name="label_theme_color">Theme color</string>
     <string name="label_interval">Check interval (minutes)</string>
+    <string name="label_background_notifications">Background notifications</string>
     <string name="action_save">Save</string>
     <string name="action_refresh">Refresh</string>
+    <string name="action_share">Share</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="share_title">Share prices</string>
+    <string name="share_text">GoldPulse\n%1$s\nLast update: %2$s</string>
+    <string name="no_data_trend">No trend data yet</string>
 
     <string name="notification_channel_name">Gold Alerts</string>
     <string name="notification_channel_description">Price change alerts for gold</string>

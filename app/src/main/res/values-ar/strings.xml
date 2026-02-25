@@ -2,11 +2,21 @@
     <string name="app_name">GoldPulse</string>
     <string name="title_trend">الاتجاه</string>
     <string name="title_settings">الإعدادات</string>
+    <string name="open_settings">فتح الإعدادات</string>
+    <string name="last_update">آخر تحديث: %1$s</string>
     <string name="label_threshold">نسبة التنبيه %%</string>
     <string name="label_currency">العملة</string>
+    <string name="label_currencies">العملات</string>
+    <string name="label_theme_color">لون السمة</string>
     <string name="label_interval">فاصل التحقق (دقائق)</string>
+    <string name="label_background_notifications">إشعارات الخلفية</string>
     <string name="action_save">حفظ</string>
     <string name="action_refresh">تحديث</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="share_title">مشاركة الأسعار</string>
+    <string name="share_text">GoldPulse\n%1$s\nآخر تحديث: %2$s</string>
+    <string name="no_data_trend">لا توجد بيانات اتجاه بعد</string>
 
     <string name="notification_channel_name">تنبيهات الذهب</string>
     <string name="notification_channel_description">تنبيهات تغير سعر الذهب</string>

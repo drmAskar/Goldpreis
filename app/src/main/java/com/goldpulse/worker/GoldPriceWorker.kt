@@ -2,8 +2,6 @@ package com.goldpulse.worker
 
 import android.content.Context
 import androidx.work.CoroutineWorker
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.goldpulse.R
 import com.goldpulse.data.local.AppPreferences
@@ -14,7 +12,6 @@ import com.goldpulse.util.formatPrice
 import com.goldpulse.util.percentChange
 import kotlinx.coroutines.flow.first
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class GoldPriceWorker(
     appContext: Context,
@@ -24,6 +21,8 @@ class GoldPriceWorker(
     override suspend fun doWork(): Result {
         val preferences = AppPreferences(applicationContext)
         val settings = preferences.settingsFlow.first()
+        if (!settings.backgroundNotificationsEnabled) return Result.success()
+
         val repository = GoldRepositoryImpl(NetworkModule.api)
 
         return try {
@@ -51,11 +50,13 @@ class GoldPriceWorker(
         } catch (_: Exception) {
             Result.retry()
         } finally {
-            val delay = settings.checkIntervalMinutes.toLong().coerceAtLeast(10L)
-            val next = OneTimeWorkRequestBuilder<GoldPriceWorker>()
-                .setInitialDelay(delay, TimeUnit.MINUTES)
-                .build()
-            WorkManager.getInstance(applicationContext).enqueue(next)
+            val latestSettings = preferences.settingsFlow.first()
+            if (latestSettings.backgroundNotificationsEnabled) {
+                WorkScheduler.enqueueNext(
+                    context = applicationContext,
+                    delayMinutes = latestSettings.checkIntervalMinutes.toLong()
+                )
+            }
         }
     }
 }

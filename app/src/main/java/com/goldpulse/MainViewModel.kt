@@ -95,6 +95,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateSettings(settings: SettingsState) = viewModelScope.launch {
         prefs.updateSettings(settings)
-        WorkScheduler.start(getApplication(), settings.checkIntervalMinutes.toLong())
+        WorkScheduler.applySettings(getApplication(), settings)
     }
 }
