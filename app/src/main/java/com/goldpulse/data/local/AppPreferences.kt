@@ -25,10 +25,9 @@ data class SettingsState(
 
 class AppPreferences(context: Context) {
     private val gson = Gson()
+    private val appContext = context.applicationContext
 
-    private val dataStore = PreferenceDataStoreFactory.create(
-        produceFile = { context.preferencesDataStoreFile("goldpulse.preferences_pb") }
-    )
+    private val dataStore = getDataStore(appContext)
 
     val settingsFlow: Flow<SettingsState> = dataStore.data.map { prefs ->
         val savedCurrency = prefs[KEY_CURRENCY] ?: "USD"
@@ -78,6 +77,17 @@ class AppPreferences(context: Context) {
     }
 
     companion object {
+        @Volatile
+        private var INSTANCE: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>? = null
+
+        private fun getDataStore(context: Context): androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: PreferenceDataStoreFactory.create(
+                    produceFile = { context.preferencesDataStoreFile("goldpulse.preferences_pb") }
+                ).also { INSTANCE = it }
+            }
+        }
+
         private val KEY_THRESHOLD = doublePreferencesKey("threshold_percent")
         private val KEY_CURRENCY = stringPreferencesKey("target_currency")
         private val KEY_INTERVAL = intPreferencesKey("check_interval_minutes")
