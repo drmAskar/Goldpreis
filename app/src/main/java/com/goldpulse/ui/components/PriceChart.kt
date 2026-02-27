@@ -12,6 +12,7 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.goldpulse.R
 import com.goldpulse.data.model.PricePoint
@@ -137,7 +138,7 @@ fun PriceChart(
                 setDrawValues(false)
             }
 
-            val sets = mutableListOf(mainSet)
+            val sets = mutableListOf<ILineDataSet>(mainSet)
             if (ma20Set.entryCount > 1) sets += ma20Set
             if (ma50Set.entryCount > 1) sets += ma50Set
             if (ma200Set.entryCount > 1) sets += ma200Set

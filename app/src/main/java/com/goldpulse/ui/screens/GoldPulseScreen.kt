@@ -123,8 +123,9 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                 }
 
                 val primary = state.settings.currency
-                if (state.currentPrice != null) {
-                    Text(text = stringResource(R.string.label_spot_price, formatPrice(state.currentPrice, primary)), style = MaterialTheme.typography.titleMedium)
+                val currentPrice = state.currentPrice
+                if (currentPrice != null) {
+                    Text(text = stringResource(R.string.label_spot_price, formatPrice(currentPrice, primary)), style = MaterialTheme.typography.titleMedium)
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -144,7 +145,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                             val price = state.pricesByCurrency[currency]
                             if (price != null) "• $currency: ${formatPrice(price, currency)}" else "• $currency: —"
                         }
-                        val extra = stringResource(R.string.share_summary_line, selectedTimeframe.name)
+                        val extra = context.getString(R.string.share_summary_line, selectedTimeframe.name)
                         val content = context.getString(R.string.share_text, "$prices\n$extra", state.lastUpdatedText.ifBlank { "—" })
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
