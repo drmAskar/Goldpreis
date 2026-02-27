@@ -4,17 +4,25 @@ import com.goldpulse.data.model.PricePoint
 import com.goldpulse.data.network.GoldApiService
 import com.goldpulse.domain.GoldRepository
 import com.goldpulse.ui.components.Timeframe
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.concurrent.ConcurrentHashMap
 
 class GoldRepositoryImpl(
     private val api: GoldApiService
 ) : GoldRepository {
 
+    private val currentCache = ConcurrentHashMap<String, Pair<Long, PricePoint>>()
+    private val historyCache = ConcurrentHashMap<String, Pair<Long, List<PricePoint>>>()
+
     override suspend fun fetchCurrentPrice(currency: String): PricePoint {
         val normalizedCurrency = currency.uppercase()
+        currentCache[normalizedCurrency]?.let { (ts, point) ->
+            if (System.currentTimeMillis() - ts < 30_000) return point
+        }
 
-        val primary = runCatching {
+        val value = retryWithBackoff {
             val response = api.getGoldPrice()
             val usdPrice = response.price
             val finalPrice = if (normalizedCurrency == "USD") usdPrice else usdPrice * fxRate(normalizedCurrency)
@@ -24,30 +32,42 @@ class GoldRepositoryImpl(
             )
         }
 
-        return primary.getOrElse {
-            val latestFromCsv = fetchStooqDailySeries(normalizedCurrency).lastOrNull()
-                ?: throw it
-            latestFromCsv
-        }
+        val result = value ?: fetchStooqDailySeries(normalizedCurrency).lastOrNull()
+            ?: throw IllegalStateException("No market data available")
+
+        currentCache[normalizedCurrency] = System.currentTimeMillis() to result
+        return result
     }
 
     override suspend fun fetchHistoricalPrices(currency: String, timeframe: Timeframe): List<PricePoint> {
         val normalizedCurrency = currency.uppercase()
+        val cacheKey = "$normalizedCurrency:${timeframe.name}"
 
-        val directSeries = runCatching { fetchStooqDailySeries(normalizedCurrency) }.getOrNull().orEmpty()
-        if (directSeries.isNotEmpty()) return trimByTimeframe(directSeries, timeframe)
+        historyCache[cacheKey]?.let { (ts, points) ->
+            if (System.currentTimeMillis() - ts < 3 * 60_000) return points
+        }
 
-        val usdSeries = fetchStooqDailySeries("USD")
-        if (usdSeries.isEmpty()) return emptyList()
-        val fx = if (normalizedCurrency == "USD") 1.0 else fxRate(normalizedCurrency)
+        val directSeries = retryWithBackoff { fetchStooqDailySeries(normalizedCurrency) }.orEmpty()
+        val result = if (directSeries.isNotEmpty()) {
+            trimByTimeframe(directSeries, timeframe)
+        } else {
+            val usdSeries = fetchStooqDailySeries("USD")
+            if (usdSeries.isEmpty()) emptyList() else {
+                val fx = if (normalizedCurrency == "USD") 1.0 else fxRate(normalizedCurrency)
+                val converted = usdSeries.map { it.copy(price = it.price * fx) }
+                trimByTimeframe(converted, timeframe)
+            }
+        }
 
-        val converted = usdSeries.map { it.copy(price = it.price * fx) }
-        return trimByTimeframe(converted, timeframe)
+        historyCache[cacheKey] = System.currentTimeMillis() to result
+        return result
     }
 
     private suspend fun fxRate(currency: String): Double {
-        val fx = api.getFxRates("https://api.frankfurter.app/latest?from=USD&to=$currency")
-        return fx.rates[currency] ?: 1.0
+        val fx = retryWithBackoff {
+            api.getFxRates("https://api.frankfurter.app/latest?from=USD&to=$currency")
+        }
+        return fx?.rates?.get(currency) ?: 1.0
     }
 
     private suspend fun fetchStooqDailySeries(currency: String): List<PricePoint> {
@@ -65,6 +85,23 @@ class GoldRepositoryImpl(
                 timestamp = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
             )
         }.toList().sortedBy { it.timestamp }
+    }
+
+    private suspend fun <T> retryWithBackoff(
+        attempts: Int = 3,
+        initialDelayMs: Long = 250,
+        maxDelayMs: Long = 1800,
+        block: suspend () -> T
+    ): T? {
+        var delayMs = initialDelayMs
+        repeat(attempts) { index ->
+            runCatching { return block() }
+            if (index < attempts - 1) {
+                delay(delayMs)
+                delayMs = (delayMs * 2).coerceAtMost(maxDelayMs)
+            }
+        }
+        return null
     }
 
     private fun trimByTimeframe(history: List<PricePoint>, timeframe: Timeframe): List<PricePoint> {

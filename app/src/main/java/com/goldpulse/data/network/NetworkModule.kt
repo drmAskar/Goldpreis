@@ -1,9 +1,11 @@
 package com.goldpulse.data.network
 
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 object NetworkModule {
@@ -13,10 +15,18 @@ object NetworkModule {
         HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
     }
 
-    private val client by lazy {
+    val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(20, TimeUnit.SECONDS)
+            .cache(Cache(File("/tmp/goldpulse-http-cache"), 15L * 1024 * 1024))
+            .addNetworkInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                response.newBuilder()
+                    .header("Cache-Control", "public, max-age=60")
+                    .build()
+            }
             .addInterceptor(logging)
             .build()
     }
