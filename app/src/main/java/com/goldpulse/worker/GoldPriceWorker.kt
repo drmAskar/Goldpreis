@@ -32,18 +32,46 @@ class GoldPriceWorker(
             preferences.saveLastPrice(latest.price)
             preferences.appendHistory(latest)
 
+            var shouldNotify = false
+            var reasonBody: String? = null
+
             if (previous != null) {
                 val change = kotlin.math.abs(percentChange(previous, latest.price))
                 if (change >= settings.thresholdPercent) {
-                    NotificationHelper.ensureChannels(applicationContext)
-                    val title = applicationContext.getString(R.string.notification_title)
-                    val body = applicationContext.getString(
+                    shouldNotify = true
+                    reasonBody = applicationContext.getString(
                         R.string.notification_body,
                         String.format(Locale.US, "%.2f", change),
                         formatPrice(latest.price, settings.currency)
                     )
-                    NotificationHelper.showAlert(applicationContext, title, body)
                 }
+            }
+
+            settings.alertAbovePrice?.let { above ->
+                if (latest.price >= above) {
+                    shouldNotify = true
+                    reasonBody = applicationContext.getString(
+                        R.string.notification_above_body,
+                        formatPrice(latest.price, settings.currency),
+                        formatPrice(above, settings.currency)
+                    )
+                }
+            }
+            settings.alertBelowPrice?.let { below ->
+                if (latest.price <= below) {
+                    shouldNotify = true
+                    reasonBody = applicationContext.getString(
+                        R.string.notification_below_body,
+                        formatPrice(latest.price, settings.currency),
+                        formatPrice(below, settings.currency)
+                    )
+                }
+            }
+
+            if (shouldNotify) {
+                NotificationHelper.ensureChannels(applicationContext)
+                val title = applicationContext.getString(R.string.notification_title)
+                NotificationHelper.showAlert(applicationContext, title, reasonBody.orEmpty())
             }
 
             Result.success()

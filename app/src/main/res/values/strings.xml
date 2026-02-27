@@ -37,4 +37,8 @@
     <string name="parity_warning">Currency parity warning: values are outside expected range.</string>
     <string name="error_transparency">Sync error: %1$s</string>
     <string name="share_summary_line">Timeframe: %1$s</string>
+    <string name="label_alert_above">Alert when price is above</string>
+    <string name="label_alert_below">Alert when price is below</string>
+    <string name="notification_above_body">Current price %1$s is above threshold %2$s</string>
+    <string name="notification_below_body">Current price %1$s is below threshold %2$s</string>
 </resources>

@@ -234,6 +234,8 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
     var selectedTheme by remember(current.themeName) { mutableStateOf(current.themeName) }
     var bgEnabled by remember(current.backgroundNotificationsEnabled) { mutableStateOf(current.backgroundNotificationsEnabled) }
     var persistentEnabled by remember(current.persistentForegroundEnabled) { mutableStateOf(current.persistentForegroundEnabled) }
+    var alertAbove by remember(current.alertAbovePrice) { mutableStateOf(current.alertAbovePrice?.toString() ?: "") }
+    var alertBelow by remember(current.alertBelowPrice) { mutableStateOf(current.alertBelowPrice?.toString() ?: "") }
     val selectedCurrencies = remember(current.currenciesCsv) {
         mutableStateListOf(*current.currenciesCsv.split(',').map { it.trim().uppercase() }.filter { it.isNotBlank() }.toTypedArray())
     }
@@ -284,6 +286,20 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                 modifier = Modifier.fillMaxWidth()
             )
 
+            OutlinedTextField(
+                value = alertAbove,
+                onValueChange = { alertAbove = it },
+                label = { Text(stringResource(R.string.label_alert_above)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = alertBelow,
+                onValueChange = { alertBelow = it },
+                label = { Text(stringResource(R.string.label_alert_below)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.label_background_notifications))
                 Switch(checked = bgEnabled, onCheckedChange = { bgEnabled = it })
@@ -307,7 +323,9 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                                 themeName = selectedTheme,
                                 checkIntervalMinutes = interval.toIntOrNull()?.coerceAtLeast(1) ?: current.checkIntervalMinutes,
                                 backgroundNotificationsEnabled = bgEnabled,
-                                persistentForegroundEnabled = persistentEnabled
+                                persistentForegroundEnabled = persistentEnabled,
+                                alertAbovePrice = alertAbove.toDoubleOrNull(),
+                                alertBelowPrice = alertBelow.toDoubleOrNull()
                             )
                         )
                     }

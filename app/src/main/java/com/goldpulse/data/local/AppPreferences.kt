@@ -21,7 +21,9 @@ data class SettingsState(
     val themeName: String = "Purple",
     val checkIntervalMinutes: Int = 10,
     val backgroundNotificationsEnabled: Boolean = true,
-    val persistentForegroundEnabled: Boolean = false
+    val persistentForegroundEnabled: Boolean = false,
+    val alertAbovePrice: Double? = null,
+    val alertBelowPrice: Double? = null
 )
 
 class AppPreferences(context: Context) {
@@ -39,7 +41,9 @@ class AppPreferences(context: Context) {
             themeName = prefs[KEY_THEME] ?: "Purple",
             checkIntervalMinutes = prefs[KEY_INTERVAL] ?: 10,
             backgroundNotificationsEnabled = prefs[KEY_BG_ENABLED] ?: true,
-            persistentForegroundEnabled = prefs[KEY_PERSISTENT_ENABLED] ?: false
+            persistentForegroundEnabled = prefs[KEY_PERSISTENT_ENABLED] ?: false,
+            alertAbovePrice = prefs[KEY_ALERT_ABOVE]?.toDoubleOrNull(),
+            alertBelowPrice = prefs[KEY_ALERT_BELOW]?.toDoubleOrNull()
         )
     }
 
@@ -60,6 +64,8 @@ class AppPreferences(context: Context) {
             prefs[KEY_INTERVAL] = settings.checkIntervalMinutes
             prefs[KEY_BG_ENABLED] = settings.backgroundNotificationsEnabled
             prefs[KEY_PERSISTENT_ENABLED] = settings.persistentForegroundEnabled
+            prefs[KEY_ALERT_ABOVE] = settings.alertAbovePrice?.toString() ?: ""
+            prefs[KEY_ALERT_BELOW] = settings.alertBelowPrice?.toString() ?: ""
         }
     }
 
@@ -100,5 +106,7 @@ class AppPreferences(context: Context) {
         private val KEY_HISTORY = stringPreferencesKey("price_history_json")
         private val KEY_BG_ENABLED = booleanPreferencesKey("background_notifications_enabled")
         private val KEY_PERSISTENT_ENABLED = booleanPreferencesKey("persistent_foreground_enabled")
+        private val KEY_ALERT_ABOVE = stringPreferencesKey("alert_above_price")
+        private val KEY_ALERT_BELOW = stringPreferencesKey("alert_below_price")
     }
 }
