@@ -128,7 +128,11 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                     Text(text = stringResource(R.string.label_spot_price, formatPrice(currentPrice, primary)), style = MaterialTheme.typography.titleMedium)
                 }
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     SnapshotChip("O", state.openPrice?.let { formatPrice(it, primary) } ?: "—")
                     SnapshotChip("H", state.highPrice?.let { formatPrice(it, primary) } ?: "—")
                     SnapshotChip("L", state.lowPrice?.let { formatPrice(it, primary) } ?: "—")
@@ -186,7 +190,11 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                     if (state.historyLoading) {
                         Text(stringResource(R.string.loading_history))
                     }
-                    PriceChart(history = state.history, timeframe = selectedTimeframe)
+                    PriceChart(
+                        history = state.history,
+                        timeframe = selectedTimeframe,
+                        showMovingAverages = state.settings.showMovingAverages
+                    )
                 }
             }
         }
@@ -209,7 +217,15 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun SnapshotChip(label: String, value: String) {
-    AssistChip(onClick = {}, label = { Text("$label: $value") })
+    AssistChip(
+        onClick = {},
+        label = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = "$label:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                Text(text = value, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -235,6 +251,7 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
     var selectedTheme by remember(current.themeName) { mutableStateOf(current.themeName) }
     var bgEnabled by remember(current.backgroundNotificationsEnabled) { mutableStateOf(current.backgroundNotificationsEnabled) }
     var persistentEnabled by remember(current.persistentForegroundEnabled) { mutableStateOf(current.persistentForegroundEnabled) }
+    var showMovingAverages by remember(current.showMovingAverages) { mutableStateOf(current.showMovingAverages) }
     var alertAbove by remember(current.alertAbovePrice) { mutableStateOf(current.alertAbovePrice?.toString() ?: "") }
     var alertBelow by remember(current.alertBelowPrice) { mutableStateOf(current.alertBelowPrice?.toString() ?: "") }
     val selectedCurrencies = remember(current.currenciesCsv) {
@@ -311,6 +328,16 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                 Switch(checked = persistentEnabled, onCheckedChange = { persistentEnabled = it })
             }
 
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.label_show_moving_averages))
+                Switch(checked = showMovingAverages, onCheckedChange = { showMovingAverages = it })
+            }
+            Text(
+                text = stringResource(R.string.helper_show_moving_averages),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
@@ -325,6 +352,7 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                                 checkIntervalMinutes = interval.toIntOrNull()?.coerceAtLeast(1) ?: current.checkIntervalMinutes,
                                 backgroundNotificationsEnabled = bgEnabled,
                                 persistentForegroundEnabled = persistentEnabled,
+                                showMovingAverages = showMovingAverages,
                                 alertAbovePrice = alertAbove.toDoubleOrNull(),
                                 alertBelowPrice = alertBelow.toDoubleOrNull()
                             )

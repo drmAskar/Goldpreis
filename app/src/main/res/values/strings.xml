@@ -11,6 +11,8 @@
     <string name="label_interval">Check interval (minutes)</string>
     <string name="label_background_notifications">Periodic background notifications</string>
     <string name="label_persistent_background">Persistent notification mode</string>
+    <string name="label_show_moving_averages">Show moving averages (MA20/50/200)</string>
+    <string name="helper_show_moving_averages">Turn off to focus only on spot price movement.</string>
     <string name="loading_history">Loading historical data…</string>
     <string name="action_save">Save</string>
     <string name="action_refresh">Refresh</string>

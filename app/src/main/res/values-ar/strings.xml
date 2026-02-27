@@ -11,6 +11,8 @@
     <string name="label_interval">فاصل التحقق (دقائق)</string>
     <string name="label_background_notifications">إشعارات الخلفية الدورية</string>
     <string name="label_persistent_background">وضع الإشعار الدائم</string>
+    <string name="label_show_moving_averages">إظهار المتوسطات المتحركة (MA20/50/200)</string>
+    <string name="helper_show_moving_averages">أوقفه للتركيز على حركة السعر الفوري فقط.</string>
     <string name="loading_history">جارٍ تحميل البيانات التاريخية…</string>
     <string name="action_save">حفظ</string>
     <string name="action_refresh">تحديث</string>

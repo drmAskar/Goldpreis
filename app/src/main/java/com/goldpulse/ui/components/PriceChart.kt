@@ -88,7 +88,8 @@ private fun movingAverage(points: List<PricePoint>, period: Int): List<Double?> 
 @Composable
 fun PriceChart(
     history: List<PricePoint>,
-    timeframe: Timeframe
+    timeframe: Timeframe,
+    showMovingAverages: Boolean = true
 ) {
     val visibleHistory = segmentedHistory(history, timeframe)
 
@@ -139,9 +140,11 @@ fun PriceChart(
             }
 
             val sets = mutableListOf<ILineDataSet>(mainSet)
-            if (ma20Set.entryCount > 1) sets += ma20Set
-            if (ma50Set.entryCount > 1) sets += ma50Set
-            if (ma200Set.entryCount > 1) sets += ma200Set
+            if (showMovingAverages) {
+                if (ma20Set.entryCount > 1) sets += ma20Set
+                if (ma50Set.entryCount > 1) sets += ma50Set
+                if (ma200Set.entryCount > 1) sets += ma200Set
+            }
 
             chart.data = LineData(sets)
             chart.description.isEnabled = false

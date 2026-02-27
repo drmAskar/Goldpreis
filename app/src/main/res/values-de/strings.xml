@@ -11,6 +11,8 @@
     <string name="label_interval">Prüfintervall (Minuten)</string>
     <string name="label_background_notifications">Periodische Hintergrundbenachrichtigungen</string>
     <string name="label_persistent_background">Permanenter Benachrichtigungsmodus</string>
+    <string name="label_show_moving_averages">Gleitende Durchschnitte anzeigen (MA20/50/200)</string>
+    <string name="helper_show_moving_averages">Ausschalten, um nur die Spotpreis-Bewegung zu sehen.</string>
     <string name="loading_history">Historische Daten werden geladen…</string>
     <string name="action_save">Speichern</string>
     <string name="action_refresh">Aktualisieren</string>
