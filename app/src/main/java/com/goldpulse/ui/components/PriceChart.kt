@@ -43,16 +43,16 @@ private fun segmentedHistory(history: List<PricePoint>, timeframe: Timeframe): L
 
     val base = when {
         filtered.size >= 2 -> filtered
-        sorted.size >= 2 -> sorted.takeLast(120)
+        sorted.size >= 2 -> sorted.takeLast(600)
         else -> sorted
     }
 
     val maxPoints = when (timeframe) {
-        Timeframe.DAY_1 -> 96
-        Timeframe.WEEK_1 -> 140
-        Timeframe.MONTH_1 -> 160
-        Timeframe.MONTH_3, Timeframe.MONTH_6 -> 180
-        Timeframe.YEAR_1, Timeframe.YEAR_5, Timeframe.MAX -> 220
+        Timeframe.DAY_1 -> 120
+        Timeframe.WEEK_1 -> 180
+        Timeframe.MONTH_1 -> 220
+        Timeframe.MONTH_3, Timeframe.MONTH_6 -> 260
+        Timeframe.YEAR_1, Timeframe.YEAR_5, Timeframe.MAX -> 320
     }
 
     return downsample(base, maxPoints)
@@ -72,6 +72,18 @@ private fun downsample(points: List<PricePoint>, maxPoints: Int): List<PricePoin
     return sampled.distinctBy { it.timestamp }
 }
 
+private fun movingAverage(points: List<PricePoint>, period: Int): List<Double?> {
+    if (points.isEmpty()) return emptyList()
+    val out = MutableList<Double?>(points.size) { null }
+    var sum = 0.0
+    points.forEachIndexed { index, p ->
+        sum += p.price
+        if (index >= period) sum -= points[index - period].price
+        if (index >= period - 1) out[index] = sum / period
+    }
+    return out
+}
+
 @Composable
 fun PriceChart(
     history: List<PricePoint>,
@@ -82,24 +94,59 @@ fun PriceChart(
     AndroidView(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp),
+            .height(260.dp),
         factory = { context -> LineChart(context) },
         update = { chart ->
             val entries = visibleHistory.mapIndexed { index, point -> Entry(index.toFloat(), point.price.toFloat()) }
-            val dataSet = LineDataSet(entries, "Gold").apply {
+            val mainSet = LineDataSet(entries, "Gold").apply {
                 color = Color.parseColor("#D4AF37")
                 valueTextColor = Color.TRANSPARENT
-                lineWidth = 2.5f
+                lineWidth = 2.3f
                 setDrawCircles(false)
-                mode = LineDataSet.Mode.CUBIC_BEZIER
+                mode = if (visibleHistory.size > 220) LineDataSet.Mode.LINEAR else LineDataSet.Mode.CUBIC_BEZIER
                 setDrawFilled(true)
                 fillColor = Color.parseColor("#33D4AF37")
             }
 
-            chart.data = LineData(dataSet)
+            val ma20 = movingAverage(visibleHistory, 20)
+            val ma50 = movingAverage(visibleHistory, 50)
+            val ma200 = movingAverage(visibleHistory, 200)
+
+            val ma20Set = LineDataSet(ma20.mapIndexedNotNull { i, v -> v?.let { Entry(i.toFloat(), it.toFloat()) } }, "MA20").apply {
+                color = Color.parseColor("#4CAF50")
+                valueTextColor = Color.TRANSPARENT
+                lineWidth = 1.4f
+                setDrawCircles(false)
+                mode = LineDataSet.Mode.LINEAR
+                setDrawValues(false)
+            }
+            val ma50Set = LineDataSet(ma50.mapIndexedNotNull { i, v -> v?.let { Entry(i.toFloat(), it.toFloat()) } }, "MA50").apply {
+                color = Color.parseColor("#2196F3")
+                valueTextColor = Color.TRANSPARENT
+                lineWidth = 1.3f
+                setDrawCircles(false)
+                mode = LineDataSet.Mode.LINEAR
+                setDrawValues(false)
+            }
+            val ma200Set = LineDataSet(ma200.mapIndexedNotNull { i, v -> v?.let { Entry(i.toFloat(), it.toFloat()) } }, "MA200").apply {
+                color = Color.parseColor("#9C27B0")
+                valueTextColor = Color.TRANSPARENT
+                lineWidth = 1.2f
+                setDrawCircles(false)
+                mode = LineDataSet.Mode.LINEAR
+                setDrawValues(false)
+            }
+
+            val sets = mutableListOf(mainSet)
+            if (ma20Set.entryCount > 1) sets += ma20Set
+            if (ma50Set.entryCount > 1) sets += ma50Set
+            if (ma200Set.entryCount > 1) sets += ma200Set
+
+            chart.data = LineData(sets)
             chart.description.isEnabled = false
             chart.axisRight.isEnabled = false
-            chart.legend.isEnabled = false
+            chart.legend.isEnabled = true
+            chart.legend.textSize = 10f
             chart.setViewPortOffsets(56f, 24f, 24f, 56f)
             chart.setExtraBottomOffset(8f)
 
@@ -107,7 +154,7 @@ fun PriceChart(
                 position = XAxis.XAxisPosition.BOTTOM
                 setDrawGridLines(false)
                 textSize = 11f
-                labelRotationAngle = -25f
+                labelRotationAngle = -20f
                 labelCount = 4
                 granularity = 1f
                 valueFormatter = object : ValueFormatter() {
