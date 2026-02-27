@@ -61,6 +61,7 @@ import com.goldpulse.data.local.SettingsState
 import com.goldpulse.ui.components.PriceChart
 import com.goldpulse.ui.components.Timeframe
 import com.goldpulse.util.formatPrice
+import java.util.Locale
 
 private val allCurrencies = listOf("USD", "EUR", "GBP", "AED", "TRY", "SAR")
 private val allThemes = listOf("Purple", "Blue", "Emerald", "Dark")
@@ -92,6 +93,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
             Column {
                 Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(text = stringResource(R.string.last_update, state.lastUpdatedText.ifBlank { "—" }), style = MaterialTheme.typography.bodySmall)
+                Text(text = stringResource(R.string.data_source_label, state.dataSourceLabel), style = MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick = { showSettings = true }) {
                 Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.open_settings))
@@ -120,6 +122,18 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                     }
                 }
 
+                val primary = state.settings.currency
+                if (state.currentPrice != null) {
+                    Text(text = stringResource(R.string.label_spot_price, formatPrice(state.currentPrice, primary)), style = MaterialTheme.typography.titleMedium)
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SnapshotChip("O", state.openPrice?.let { formatPrice(it, primary) } ?: "—")
+                    SnapshotChip("H", state.highPrice?.let { formatPrice(it, primary) } ?: "—")
+                    SnapshotChip("L", state.lowPrice?.let { formatPrice(it, primary) } ?: "—")
+                    SnapshotChip("24h", state.dailyChangePercent?.let { String.format(Locale.getDefault(), "%.2f%%", it) } ?: "—")
+                }
+
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                     IconButton(onClick = viewModel::refreshPrice) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh))
@@ -130,7 +144,8 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                             val price = state.pricesByCurrency[currency]
                             if (price != null) "• $currency: ${formatPrice(price, currency)}" else "• $currency: —"
                         }
-                        val content = context.getString(R.string.share_text, prices, state.lastUpdatedText.ifBlank { "—" })
+                        val extra = stringResource(R.string.share_summary_line, selectedTimeframe.name)
+                        val content = context.getString(R.string.share_text, "$prices\n$extra", state.lastUpdatedText.ifBlank { "—" })
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, content)
@@ -141,8 +156,14 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                     }
                 }
 
+                if (state.staleData) {
+                    Text(text = stringResource(R.string.stale_data_warning), color = MaterialTheme.colorScheme.error)
+                }
+                if (state.parityWarning) {
+                    Text(text = stringResource(R.string.parity_warning), color = MaterialTheme.colorScheme.error)
+                }
                 if (!state.error.isNullOrBlank()) {
-                    Text(text = state.error ?: "", color = MaterialTheme.colorScheme.error)
+                    Text(text = stringResource(R.string.error_transparency, state.error ?: ""), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -183,6 +204,11 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
             }
         )
     }
+}
+
+@Composable
+private fun SnapshotChip(label: String, value: String) {
+    AssistChip(onClick = {}, label = { Text("$label: $value") })
 }
 
 @OptIn(ExperimentalLayoutApi::class)

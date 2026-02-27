@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 data class UiState(
     val loading: Boolean = false,
@@ -28,6 +29,13 @@ data class UiState(
     val lastUpdatedText: String = "",
     val settings: SettingsState = SettingsState(),
     val history: List<PricePoint> = emptyList(),
+    val openPrice: Double? = null,
+    val highPrice: Double? = null,
+    val lowPrice: Double? = null,
+    val dailyChangePercent: Double? = null,
+    val parityWarning: Boolean = false,
+    val dataSourceLabel: String = "gold-api.com + stooq.com + frankfurter.app",
+    val staleData: Boolean = false,
     val error: String? = null
 )
 
@@ -61,6 +69,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshPrice() = viewModelScope.launch {
+        if (_uiState.value.loading) return@launch
+
         _uiState.update { it.copy(loading = true, error = null) }
         runCatching {
             val settings = prefs.settingsFlow.first()
@@ -90,13 +100,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 it.copy(
                     currentPrice = primaryPoint.price,
                     pricesByCurrency = prices,
-                    lastUpdatedText = time
+                    lastUpdatedText = time,
+                    parityWarning = !isParityConsistent(prices),
+                    staleData = false
                 )
             }
 
             loadHistory(currentTimeframe)
         }.onFailure {
-            _uiState.update { state -> state.copy(error = it.message ?: "Unknown error") }
+            _uiState.update { state ->
+                state.copy(
+                    error = it.message ?: "Unknown error",
+                    staleData = true
+                )
+            }
         }
         _uiState.update { it.copy(loading = false) }
     }
@@ -117,12 +134,37 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             .distinctBy { it.timestamp }
             .sortedBy { it.timestamp }
 
+        val now = System.currentTimeMillis() / 1000
+        val isStale = merged.lastOrNull()?.let { abs(now - it.timestamp) > 18 * 60 * 60 } ?: true
+
         _uiState.update {
             it.copy(
                 historyLoading = false,
-                history = merged
+                history = merged,
+                openPrice = merged.firstOrNull()?.price,
+                highPrice = merged.maxOfOrNull { p -> p.price },
+                lowPrice = merged.minOfOrNull { p -> p.price },
+                dailyChangePercent = computeDailyChangePercent(merged),
+                staleData = isStale
             )
         }
+    }
+
+    private fun computeDailyChangePercent(history: List<PricePoint>): Double? {
+        if (history.size < 2) return null
+        val last = history.last().price
+        val dayAgoTs = (System.currentTimeMillis() / 1000) - (24 * 60 * 60)
+        val base = history.lastOrNull { it.timestamp <= dayAgoTs }?.price ?: history.first().price
+        if (base == 0.0) return null
+        return ((last - base) / base) * 100.0
+    }
+
+    private fun isParityConsistent(pricesByCurrency: Map<String, Double>): Boolean {
+        if (pricesByCurrency.size <= 1) return true
+        val values = pricesByCurrency.values.filter { it > 0 }
+        if (values.size <= 1) return true
+        val avg = values.average()
+        return values.all { kotlin.math.abs(it - avg) / avg < 0.35 }
     }
 
     fun updateSettings(settings: SettingsState) = viewModelScope.launch {
