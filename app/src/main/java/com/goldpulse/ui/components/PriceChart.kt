@@ -19,26 +19,57 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class Timeframe { DAY_1, WEEK_1, MONTH_1, YEAR_1 }
+enum class Timeframe { DAY_1, WEEK_1, MONTH_1, MONTH_3, MONTH_6, YEAR_1, YEAR_5, MAX }
 
-private fun timeframeWindowSeconds(timeframe: Timeframe): Long = when (timeframe) {
+private fun timeframeWindowSeconds(timeframe: Timeframe): Long? = when (timeframe) {
     Timeframe.DAY_1 -> 24L * 60 * 60
     Timeframe.WEEK_1 -> 7L * 24 * 60 * 60
     Timeframe.MONTH_1 -> 30L * 24 * 60 * 60
+    Timeframe.MONTH_3 -> 90L * 24 * 60 * 60
+    Timeframe.MONTH_6 -> 180L * 24 * 60 * 60
     Timeframe.YEAR_1 -> 365L * 24 * 60 * 60
+    Timeframe.YEAR_5 -> 365L * 24 * 60 * 60 * 5
+    Timeframe.MAX -> null
 }
 
 private fun segmentedHistory(history: List<PricePoint>, timeframe: Timeframe): List<PricePoint> {
     if (history.isEmpty()) return emptyList()
-    val now = System.currentTimeMillis() / 1000
-    val minTimestamp = now - timeframeWindowSeconds(timeframe)
-    val filtered = history.filter { it.timestamp >= minTimestamp }
 
-    return when {
+    val sorted = history.sortedBy { it.timestamp }
+    val filtered = timeframeWindowSeconds(timeframe)?.let { window ->
+        val minTimestamp = (System.currentTimeMillis() / 1000) - window
+        sorted.filter { it.timestamp >= minTimestamp }
+    } ?: sorted
+
+    val base = when {
         filtered.size >= 2 -> filtered
-        history.size >= 2 -> history.takeLast(30)
-        else -> history
+        sorted.size >= 2 -> sorted.takeLast(120)
+        else -> sorted
     }
+
+    val maxPoints = when (timeframe) {
+        Timeframe.DAY_1 -> 96
+        Timeframe.WEEK_1 -> 140
+        Timeframe.MONTH_1 -> 160
+        Timeframe.MONTH_3, Timeframe.MONTH_6 -> 180
+        Timeframe.YEAR_1, Timeframe.YEAR_5, Timeframe.MAX -> 220
+    }
+
+    return downsample(base, maxPoints)
+}
+
+private fun downsample(points: List<PricePoint>, maxPoints: Int): List<PricePoint> {
+    if (points.size <= maxPoints || maxPoints < 3) return points
+    val sampled = ArrayList<PricePoint>(maxPoints)
+    sampled += points.first()
+    val buckets = maxPoints - 2
+    val step = (points.size - 2).toFloat() / buckets
+    for (i in 0 until buckets) {
+        val index = 1 + (i * step).toInt().coerceIn(0, points.lastIndex - 1)
+        sampled += points[index]
+    }
+    sampled += points.last()
+    return sampled.distinctBy { it.timestamp }
 }
 
 @Composable
@@ -86,8 +117,9 @@ fun PriceChart(
                         val pattern = when (timeframe) {
                             Timeframe.DAY_1 -> "HH:mm"
                             Timeframe.WEEK_1 -> "EEE"
-                            Timeframe.MONTH_1 -> "dd MMM"
+                            Timeframe.MONTH_1, Timeframe.MONTH_3, Timeframe.MONTH_6 -> "dd MMM"
                             Timeframe.YEAR_1 -> "MMM yy"
+                            Timeframe.YEAR_5, Timeframe.MAX -> "yyyy"
                         }
                         return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(millis))
                     }

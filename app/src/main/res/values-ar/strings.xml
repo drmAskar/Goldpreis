@@ -9,7 +9,9 @@
     <string name="label_currencies">العملات</string>
     <string name="label_theme_color">لون السمة</string>
     <string name="label_interval">فاصل التحقق (دقائق)</string>
-    <string name="label_background_notifications">إشعارات الخلفية</string>
+    <string name="label_background_notifications">إشعارات الخلفية الدورية</string>
+    <string name="label_persistent_background">وضع الإشعار الدائم</string>
+    <string name="loading_history">جارٍ تحميل البيانات التاريخية…</string>
     <string name="action_save">حفظ</string>
     <string name="action_refresh">تحديث</string>
     <string name="action_share">مشاركة</string>
@@ -22,4 +24,11 @@
     <string name="notification_channel_description">تنبيهات تغير سعر الذهب</string>
     <string name="notification_title">تنبيه سعر الذهب</string>
     <string name="notification_body">تغير السعر بنسبة %1$s%%. السعر الحالي: %2$s</string>
+
+    <string name="notification_persistent_channel_name">تتبع GoldPulse المباشر</string>
+    <string name="notification_persistent_channel_description">إشعار دائم لتتبع سعر الذهب</string>
+    <string name="notification_persistent_title">GoldPulse مباشر</string>
+    <string name="notification_persistent_loading">جارٍ تحديث آخر سعر للذهب…</string>
+    <string name="notification_persistent_body">%1$s • تم التحديث %2$s</string>
+    <string name="notification_persistent_error">تعذر تحديث السعر. ستتم إعادة المحاولة…</string>
 </resources>

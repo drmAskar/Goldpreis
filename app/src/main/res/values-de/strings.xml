@@ -9,7 +9,9 @@
     <string name="label_currencies">Währungen</string>
     <string name="label_theme_color">Themenfarbe</string>
     <string name="label_interval">Prüfintervall (Minuten)</string>
-    <string name="label_background_notifications">Hintergrundbenachrichtigungen</string>
+    <string name="label_background_notifications">Periodische Hintergrundbenachrichtigungen</string>
+    <string name="label_persistent_background">Permanenter Benachrichtigungsmodus</string>
+    <string name="loading_history">Historische Daten werden geladen…</string>
     <string name="action_save">Speichern</string>
     <string name="action_refresh">Aktualisieren</string>
     <string name="action_share">Teilen</string>
@@ -22,4 +24,11 @@
     <string name="notification_channel_description">Preisänderungswarnungen für Gold</string>
     <string name="notification_title">Goldpreis-Alarm</string>
     <string name="notification_body">Preis hat sich um %1$s%% geändert. Aktueller Preis: %2$s</string>
+
+    <string name="notification_persistent_channel_name">GoldPulse Live-Tracking</string>
+    <string name="notification_persistent_channel_description">Permanente Benachrichtigung zur Goldpreis-Verfolgung</string>
+    <string name="notification_persistent_title">GoldPulse live</string>
+    <string name="notification_persistent_loading">Aktualisiere den neuesten Goldpreis…</string>
+    <string name="notification_persistent_body">%1$s • Aktualisiert %2$s</string>
+    <string name="notification_persistent_error">Preis konnte nicht aktualisiert werden. Neuer Versuch…</string>
 </resources>

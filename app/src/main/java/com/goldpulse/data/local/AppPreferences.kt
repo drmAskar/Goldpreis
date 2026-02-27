@@ -2,9 +2,9 @@ package com.goldpulse.data.local
 
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -20,7 +20,8 @@ data class SettingsState(
     val currenciesCsv: String = "USD,EUR,AED",
     val themeName: String = "Purple",
     val checkIntervalMinutes: Int = 10,
-    val backgroundNotificationsEnabled: Boolean = true
+    val backgroundNotificationsEnabled: Boolean = true,
+    val persistentForegroundEnabled: Boolean = false
 )
 
 class AppPreferences(context: Context) {
@@ -37,7 +38,8 @@ class AppPreferences(context: Context) {
             currenciesCsv = prefs[KEY_CURRENCIES] ?: savedCurrency,
             themeName = prefs[KEY_THEME] ?: "Purple",
             checkIntervalMinutes = prefs[KEY_INTERVAL] ?: 10,
-            backgroundNotificationsEnabled = prefs[KEY_BG_ENABLED] ?: true
+            backgroundNotificationsEnabled = prefs[KEY_BG_ENABLED] ?: true,
+            persistentForegroundEnabled = prefs[KEY_PERSISTENT_ENABLED] ?: false
         )
     }
 
@@ -57,6 +59,7 @@ class AppPreferences(context: Context) {
             prefs[KEY_THEME] = settings.themeName
             prefs[KEY_INTERVAL] = settings.checkIntervalMinutes
             prefs[KEY_BG_ENABLED] = settings.backgroundNotificationsEnabled
+            prefs[KEY_PERSISTENT_ENABLED] = settings.persistentForegroundEnabled
         }
     }
 
@@ -64,7 +67,7 @@ class AppPreferences(context: Context) {
         dataStore.edit { it[KEY_LAST_PRICE] = price }
     }
 
-    suspend fun appendHistory(point: PricePoint, maxItems: Int = 60) {
+    suspend fun appendHistory(point: PricePoint, maxItems: Int = 600) {
         dataStore.edit { prefs ->
             val type = object : TypeToken<List<PricePoint>>() {}.type
             val current = runCatching {
@@ -96,5 +99,6 @@ class AppPreferences(context: Context) {
         private val KEY_LAST_PRICE = doublePreferencesKey("last_price")
         private val KEY_HISTORY = stringPreferencesKey("price_history_json")
         private val KEY_BG_ENABLED = booleanPreferencesKey("background_notifications_enabled")
+        private val KEY_PERSISTENT_ENABLED = booleanPreferencesKey("persistent_foreground_enabled")
     }
 }

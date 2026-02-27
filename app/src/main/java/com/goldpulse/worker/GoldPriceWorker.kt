@@ -35,7 +35,7 @@ class GoldPriceWorker(
             if (previous != null) {
                 val change = kotlin.math.abs(percentChange(previous, latest.price))
                 if (change >= settings.thresholdPercent) {
-                    NotificationHelper.ensureChannel(applicationContext)
+                    NotificationHelper.ensureChannels(applicationContext)
                     val title = applicationContext.getString(R.string.notification_title)
                     val body = applicationContext.getString(
                         R.string.notification_body,

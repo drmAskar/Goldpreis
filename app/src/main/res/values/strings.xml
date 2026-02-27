@@ -9,7 +9,9 @@
     <string name="label_currencies">Currencies</string>
     <string name="label_theme_color">Theme color</string>
     <string name="label_interval">Check interval (minutes)</string>
-    <string name="label_background_notifications">Background notifications</string>
+    <string name="label_background_notifications">Periodic background notifications</string>
+    <string name="label_persistent_background">Persistent notification mode</string>
+    <string name="loading_history">Loading historical data…</string>
     <string name="action_save">Save</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_share">Share</string>
@@ -22,4 +24,11 @@
     <string name="notification_channel_description">Price change alerts for gold</string>
     <string name="notification_title">Gold price alert</string>
     <string name="notification_body">Price changed by %1$s%%. Current price: %2$s</string>
+
+    <string name="notification_persistent_channel_name">GoldPulse Live Tracking</string>
+    <string name="notification_persistent_channel_description">Persistent gold price tracking notification</string>
+    <string name="notification_persistent_title">GoldPulse live</string>
+    <string name="notification_persistent_loading">Updating latest gold price…</string>
+    <string name="notification_persistent_body">%1$s • Updated %2$s</string>
+    <string name="notification_persistent_error">Could not refresh price. Retrying…</string>
 </resources>

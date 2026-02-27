@@ -2,8 +2,8 @@ package com.goldpulse
 
 import android.app.Application
 import com.goldpulse.data.local.AppPreferences
+import com.goldpulse.service.BackgroundModeController
 import com.goldpulse.util.NotificationHelper
-import com.goldpulse.worker.WorkScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,11 +15,11 @@ class GoldPulseApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        NotificationHelper.ensureChannel(this)
+        NotificationHelper.ensureChannels(this)
 
         appScope.launch {
             val settings = AppPreferences(this@GoldPulseApp).settingsFlow.first()
-            WorkScheduler.applySettings(this@GoldPulseApp, settings)
+            BackgroundModeController.apply(this@GoldPulseApp, settings)
         }
     }
 }

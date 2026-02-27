@@ -8,7 +8,8 @@ import com.goldpulse.data.local.SettingsState
 import com.goldpulse.data.model.PricePoint
 import com.goldpulse.data.network.NetworkModule
 import com.goldpulse.data.repository.GoldRepositoryImpl
-import com.goldpulse.worker.WorkScheduler
+import com.goldpulse.service.BackgroundModeController
+import com.goldpulse.ui.components.Timeframe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +22,7 @@ import java.util.Locale
 
 data class UiState(
     val loading: Boolean = false,
+    val historyLoading: Boolean = false,
     val currentPrice: Double? = null,
     val pricesByCurrency: Map<String, Double> = emptyMap(),
     val lastUpdatedText: String = "",
@@ -32,25 +34,29 @@ data class UiState(
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = AppPreferences(app.applicationContext)
     private val repository = GoldRepositoryImpl(NetworkModule.api)
+    private var currentTimeframe: Timeframe = Timeframe.DAY_1
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
         observeSettings()
-        observeHistory()
+        observeLocalHistory()
         refreshPrice()
     }
 
     private fun observeSettings() = viewModelScope.launch {
         prefs.settingsFlow.collect { settings ->
             _uiState.update { it.copy(settings = settings) }
+            loadHistory(currentTimeframe)
         }
     }
 
-    private fun observeHistory() = viewModelScope.launch {
+    private fun observeLocalHistory() = viewModelScope.launch {
         prefs.historyFlow.collect { history ->
-            _uiState.update { it.copy(history = history, currentPrice = history.lastOrNull()?.price ?: it.currentPrice) }
+            _uiState.update {
+                it.copy(currentPrice = history.lastOrNull()?.price ?: it.currentPrice)
+            }
         }
     }
 
@@ -87,14 +93,41 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     lastUpdatedText = time
                 )
             }
+
+            loadHistory(currentTimeframe)
         }.onFailure {
             _uiState.update { state -> state.copy(error = it.message ?: "Unknown error") }
         }
         _uiState.update { it.copy(loading = false) }
     }
 
+    fun onTimeframeChanged(timeframe: Timeframe) {
+        currentTimeframe = timeframe
+        loadHistory(timeframe)
+    }
+
+    private fun loadHistory(timeframe: Timeframe) = viewModelScope.launch {
+        val currency = _uiState.value.settings.currency
+        _uiState.update { it.copy(historyLoading = true) }
+        val remote = runCatching {
+            repository.fetchHistoricalPrices(currency, timeframe)
+        }.getOrDefault(emptyList())
+        val local = prefs.historyFlow.first()
+        val merged = (remote + local)
+            .distinctBy { it.timestamp }
+            .sortedBy { it.timestamp }
+
+        _uiState.update {
+            it.copy(
+                historyLoading = false,
+                history = merged
+            )
+        }
+    }
+
     fun updateSettings(settings: SettingsState) = viewModelScope.launch {
         prefs.updateSettings(settings)
-        WorkScheduler.applySettings(getApplication(), settings)
+        BackgroundModeController.apply(getApplication(), settings)
+        loadHistory(currentTimeframe)
     }
 }

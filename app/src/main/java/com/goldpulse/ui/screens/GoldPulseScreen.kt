@@ -30,10 +30,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -154,7 +154,16 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(R.string.title_trend), style = MaterialTheme.typography.titleMedium)
-                    TimeframeSelector(selected = selectedTimeframe, onSelected = { selectedTimeframe = it })
+                    TimeframeSelector(
+                        selected = selectedTimeframe,
+                        onSelected = {
+                            selectedTimeframe = it
+                            viewModel.onTimeframeChanged(it)
+                        }
+                    )
+                    if (state.historyLoading) {
+                        Text(stringResource(R.string.loading_history))
+                    }
                     PriceChart(history = state.history, timeframe = selectedTimeframe)
                 }
             }
@@ -176,13 +185,18 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TimeframeSelector(selected: Timeframe, onSelected: (Timeframe) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         FilterChip(selected = selected == Timeframe.DAY_1, onClick = { onSelected(Timeframe.DAY_1) }, label = { Text("1D") })
         FilterChip(selected = selected == Timeframe.WEEK_1, onClick = { onSelected(Timeframe.WEEK_1) }, label = { Text("1W") })
         FilterChip(selected = selected == Timeframe.MONTH_1, onClick = { onSelected(Timeframe.MONTH_1) }, label = { Text("1M") })
+        FilterChip(selected = selected == Timeframe.MONTH_3, onClick = { onSelected(Timeframe.MONTH_3) }, label = { Text("3M") })
+        FilterChip(selected = selected == Timeframe.MONTH_6, onClick = { onSelected(Timeframe.MONTH_6) }, label = { Text("6M") })
         FilterChip(selected = selected == Timeframe.YEAR_1, onClick = { onSelected(Timeframe.YEAR_1) }, label = { Text("1Y") })
+        FilterChip(selected = selected == Timeframe.YEAR_5, onClick = { onSelected(Timeframe.YEAR_5) }, label = { Text("5Y") })
+        FilterChip(selected = selected == Timeframe.MAX, onClick = { onSelected(Timeframe.MAX) }, label = { Text("MAX") })
     }
 }
 
@@ -193,6 +207,7 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
     var interval by remember(current.checkIntervalMinutes) { mutableStateOf(current.checkIntervalMinutes.toString()) }
     var selectedTheme by remember(current.themeName) { mutableStateOf(current.themeName) }
     var bgEnabled by remember(current.backgroundNotificationsEnabled) { mutableStateOf(current.backgroundNotificationsEnabled) }
+    var persistentEnabled by remember(current.persistentForegroundEnabled) { mutableStateOf(current.persistentForegroundEnabled) }
     val selectedCurrencies = remember(current.currenciesCsv) {
         mutableStateListOf(*current.currenciesCsv.split(',').map { it.trim().uppercase() }.filter { it.isNotBlank() }.toTypedArray())
     }
@@ -248,6 +263,11 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                 Switch(checked = bgEnabled, onCheckedChange = { bgEnabled = it })
             }
 
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.label_persistent_background))
+                Switch(checked = persistentEnabled, onCheckedChange = { persistentEnabled = it })
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
@@ -260,7 +280,8 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                                 currenciesCsv = currencies.joinToString(","),
                                 themeName = selectedTheme,
                                 checkIntervalMinutes = interval.toIntOrNull()?.coerceAtLeast(1) ?: current.checkIntervalMinutes,
-                                backgroundNotificationsEnabled = bgEnabled
+                                backgroundNotificationsEnabled = bgEnabled,
+                                persistentForegroundEnabled = persistentEnabled
                             )
                         )
                     }
