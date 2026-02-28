@@ -12,6 +12,7 @@
     <string name="label_interval">فاصل التحقق (دقائق)</string>
     <string name="label_background_notifications">إشعارات الخلفية الدورية</string>
     <string name="label_persistent_background">وضع الإشعار الدائم</string>
+    <string name="label_persistent_ticker">إظهار شريط الحالة (السعر + نسبة التغير)</string>
     <string name="label_show_moving_averages">إظهار المتوسطات المتحركة (MA20/50/200)</string>
     <string name="helper_show_moving_averages">أوقفه للتركيز على حركة السعر الفوري فقط.</string>
     <string name="loading_history">جارٍ تحميل البيانات التاريخية…</string>
@@ -33,6 +34,7 @@
     <string name="notification_persistent_title">GoldPulse مباشر</string>
     <string name="notification_persistent_loading">جارٍ تحديث آخر سعر للذهب…</string>
     <string name="notification_persistent_body">%1$s • تم التحديث %2$s</string>
+    <string name="notification_persistent_ticker_body">%1$s %2$s %3$s • %4$s</string>
     <string name="notification_persistent_error">تعذر تحديث السعر. ستتم إعادة المحاولة…</string>
     <string name="label_spot_price">السعر الفوري: %1$s</string>
     <string name="data_source_label">المصدر: %1$s</string>

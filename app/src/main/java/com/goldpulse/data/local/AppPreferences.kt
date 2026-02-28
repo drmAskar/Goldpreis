@@ -22,6 +22,7 @@ data class SettingsState(
     val checkIntervalMinutes: Int = 10,
     val backgroundNotificationsEnabled: Boolean = true,
     val persistentForegroundEnabled: Boolean = false,
+    val persistentTickerEnabled: Boolean = false,
     val showMovingAverages: Boolean = true,
     val alertAbovePrice: Double? = null,
     val alertBelowPrice: Double? = null
@@ -43,6 +44,7 @@ class AppPreferences(context: Context) {
             checkIntervalMinutes = prefs[KEY_INTERVAL] ?: 10,
             backgroundNotificationsEnabled = prefs[KEY_BG_ENABLED] ?: true,
             persistentForegroundEnabled = prefs[KEY_PERSISTENT_ENABLED] ?: false,
+            persistentTickerEnabled = prefs[KEY_PERSISTENT_TICKER_ENABLED] ?: false,
             showMovingAverages = prefs[KEY_SHOW_MA] ?: true,
             alertAbovePrice = prefs[KEY_ALERT_ABOVE]?.toDoubleOrNull(),
             alertBelowPrice = prefs[KEY_ALERT_BELOW]?.toDoubleOrNull()
@@ -66,6 +68,7 @@ class AppPreferences(context: Context) {
             prefs[KEY_INTERVAL] = settings.checkIntervalMinutes
             prefs[KEY_BG_ENABLED] = settings.backgroundNotificationsEnabled
             prefs[KEY_PERSISTENT_ENABLED] = settings.persistentForegroundEnabled
+            prefs[KEY_PERSISTENT_TICKER_ENABLED] = settings.persistentTickerEnabled
             prefs[KEY_SHOW_MA] = settings.showMovingAverages
             prefs[KEY_ALERT_ABOVE] = settings.alertAbovePrice?.toString() ?: ""
             prefs[KEY_ALERT_BELOW] = settings.alertBelowPrice?.toString() ?: ""
@@ -109,6 +112,7 @@ class AppPreferences(context: Context) {
         private val KEY_HISTORY = stringPreferencesKey("price_history_json")
         private val KEY_BG_ENABLED = booleanPreferencesKey("background_notifications_enabled")
         private val KEY_PERSISTENT_ENABLED = booleanPreferencesKey("persistent_foreground_enabled")
+        private val KEY_PERSISTENT_TICKER_ENABLED = booleanPreferencesKey("persistent_ticker_enabled")
         private val KEY_SHOW_MA = booleanPreferencesKey("show_moving_averages")
         private val KEY_ALERT_ABOVE = stringPreferencesKey("alert_above_price")
         private val KEY_ALERT_BELOW = stringPreferencesKey("alert_below_price")

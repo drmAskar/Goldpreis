@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 class ForegroundPriceService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,18 +64,50 @@ class ForegroundPriceService : Service() {
                     prefs.saveLastPrice(latest.price)
                     prefs.appendHistory(latest)
                     val updated = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-                    getString(
-                        R.string.notification_persistent_body,
-                        formatPrice(latest.price, settings.currency),
-                        updated
-                    )
+
+                    val history24h = prefs.historyFlow.first()
+                        .asSequence()
+                        .filter { it.timestamp >= (latest.timestamp - 24L * 60 * 60) }
+                        .sortedBy { it.timestamp }
+                        .toList()
+                    val previous = history24h.dropLast(1).lastOrNull()
+
+                    val trendPercent = previous?.price
+                        ?.takeIf { abs(it) > 0.000001 }
+                        ?.let { ((latest.price - it) / it) * 100.0 }
+                    val trendUp = trendPercent?.let { it >= 0.0 }
+                    val marker = when {
+                        trendPercent == null -> ""
+                        trendPercent >= 0 -> "▲"
+                        else -> "▼"
+                    }
+
+                    val body = if (settings.persistentTickerEnabled && trendPercent != null) {
+                        val pctText = String.format(Locale.getDefault(), "%.2f%%", abs(trendPercent))
+                        getString(
+                            R.string.notification_persistent_ticker_body,
+                            formatPrice(latest.price, settings.currency),
+                            marker,
+                            pctText,
+                            updated
+                        )
+                    } else {
+                        getString(
+                            R.string.notification_persistent_body,
+                            formatPrice(latest.price, settings.currency),
+                            updated
+                        )
+                    }
+
+                    body to if (settings.persistentTickerEnabled) trendUp else null
                 }.getOrElse {
-                    getString(R.string.notification_persistent_error)
+                    getString(R.string.notification_persistent_error) to null
                 }
 
                 NotificationHelper.updateOngoing(
                     context = applicationContext,
-                    body = display
+                    body = display.first,
+                    trendUp = display.second
                 )
 
                 val delayMs = settings.checkIntervalMinutes.coerceAtLeast(1) * 60_000L

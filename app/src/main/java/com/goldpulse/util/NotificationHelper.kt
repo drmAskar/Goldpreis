@@ -49,21 +49,39 @@ object NotificationHelper {
         NotificationManagerCompat.from(context).notify((System.currentTimeMillis() % 100000).toInt(), notification)
     }
 
-    fun buildOngoingNotification(context: Context, title: String, body: String) =
-        NotificationCompat.Builder(context, ONGOING_CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_popup_sync)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setContentIntent(contentIntent(context))
-            .build()
+    fun buildOngoingNotification(
+        context: Context,
+        title: String,
+        body: String,
+        trendUp: Boolean? = null
+    ) = NotificationCompat.Builder(context, ONGOING_CHANNEL_ID)
+        .setSmallIcon(android.R.drawable.ic_popup_sync)
+        .setContentTitle(title)
+        .setContentText(body)
+        .setOngoing(true)
+        .setOnlyAlertOnce(true)
+        .setContentIntent(contentIntent(context))
+        .apply {
+            when (trendUp) {
+                true -> {
+                    setColor(0xFF2E7D32.toInt())
+                    setColorized(true)
+                }
+                false -> {
+                    setColor(0xFFC62828.toInt())
+                    setColorized(true)
+                }
+                null -> Unit
+            }
+        }
+        .build()
 
-    fun updateOngoing(context: Context, body: String) {
+    fun updateOngoing(context: Context, body: String, trendUp: Boolean? = null) {
         val notification = buildOngoingNotification(
             context = context,
             title = context.getString(R.string.notification_persistent_title),
-            body = body
+            body = body,
+            trendUp = trendUp
         )
         NotificationManagerCompat.from(context).notify(ONGOING_NOTIFICATION_ID, notification)
     }

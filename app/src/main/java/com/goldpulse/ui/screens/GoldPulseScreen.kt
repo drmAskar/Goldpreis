@@ -165,7 +165,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                         }
                         scope.launch {
                             val uri = withContext(Dispatchers.IO) {
-                                exportChartPng(context, chart.chartBitmap)
+                                exportChartPng(context, chart)
                             }
                             if (uri == null) {
                                 Toast.makeText(context, context.getString(R.string.export_failed), Toast.LENGTH_SHORT).show()
@@ -302,6 +302,7 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
     var selectedTheme by remember(current.themeName) { mutableStateOf(current.themeName) }
     var bgEnabled by remember(current.backgroundNotificationsEnabled) { mutableStateOf(current.backgroundNotificationsEnabled) }
     var persistentEnabled by remember(current.persistentForegroundEnabled) { mutableStateOf(current.persistentForegroundEnabled) }
+    var persistentTickerEnabled by remember(current.persistentTickerEnabled) { mutableStateOf(current.persistentTickerEnabled) }
     var showMovingAverages by remember(current.showMovingAverages) { mutableStateOf(current.showMovingAverages) }
     var alertAbove by remember(current.alertAbovePrice) { mutableStateOf(current.alertAbovePrice?.toString() ?: "") }
     var alertBelow by remember(current.alertBelowPrice) { mutableStateOf(current.alertBelowPrice?.toString() ?: "") }
@@ -398,6 +399,11 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                 }
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.label_persistent_ticker))
+                    Switch(checked = persistentTickerEnabled, onCheckedChange = { persistentTickerEnabled = it })
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(stringResource(R.string.label_show_moving_averages))
                     Switch(checked = showMovingAverages, onCheckedChange = { showMovingAverages = it })
                 }
@@ -428,6 +434,7 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                                 checkIntervalMinutes = interval.toIntOrNull()?.coerceAtLeast(1) ?: current.checkIntervalMinutes,
                                 backgroundNotificationsEnabled = bgEnabled,
                                 persistentForegroundEnabled = persistentEnabled,
+                                persistentTickerEnabled = persistentTickerEnabled,
                                 showMovingAverages = showMovingAverages,
                                 alertAbovePrice = alertAbove.toDoubleOrNull(),
                                 alertBelowPrice = alertBelow.toDoubleOrNull()
