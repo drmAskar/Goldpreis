@@ -49,7 +49,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         observeSettings()
-        observeLocalHistory()
         refreshPrice()
     }
 
@@ -57,14 +56,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         prefs.settingsFlow.collect { settings ->
             _uiState.update { it.copy(settings = settings) }
             loadHistory(currentTimeframe)
-        }
-    }
-
-    private fun observeLocalHistory() = viewModelScope.launch {
-        prefs.historyFlow.collect { history ->
-            _uiState.update {
-                it.copy(currentPrice = history.lastOrNull()?.price ?: it.currentPrice)
-            }
         }
     }
 
@@ -81,14 +72,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 .distinct()
                 .ifEmpty { listOf("USD") }
 
+            val oldPrices = _uiState.value.pricesByCurrency
             val prices = linkedMapOf<String, Double>()
             currencies.forEach { c ->
-                prices[c] = repository.fetchCurrentPrice(c).price
+                val fetched = runCatching { repository.fetchCurrentPrice(c).price }.getOrNull()
+                val fallback = oldPrices[c]
+                if (fetched != null) prices[c] = fetched
+                else if (fallback != null) prices[c] = fallback
             }
 
             val primary = currencies.first()
+            val primaryValue = prices[primary] ?: runCatching { repository.fetchCurrentPrice(primary).price }.getOrNull()
+                ?: oldPrices[primary]
+                ?: 0.0
+            prices[primary] = primaryValue
             val primaryPoint = PricePoint(
-                price = prices[primary] ?: 0.0,
+                price = primaryValue,
                 timestamp = System.currentTimeMillis() / 1000
             )
 
@@ -129,22 +128,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val remote = runCatching {
             repository.fetchHistoricalPrices(currency, timeframe)
         }.getOrDefault(emptyList())
-        val local = prefs.historyFlow.first()
-        val merged = (remote + local)
             .distinctBy { it.timestamp }
             .sortedBy { it.timestamp }
 
         val now = System.currentTimeMillis() / 1000
-        val isStale = merged.lastOrNull()?.let { abs(now - it.timestamp) > 18 * 60 * 60 } ?: true
+        val isStale = remote.lastOrNull()?.let { abs(now - it.timestamp) > 48 * 60 * 60 } ?: false
 
         _uiState.update {
             it.copy(
                 historyLoading = false,
-                history = merged,
-                openPrice = merged.firstOrNull()?.price,
-                highPrice = merged.maxOfOrNull { p -> p.price },
-                lowPrice = merged.minOfOrNull { p -> p.price },
-                dailyChangePercent = computeDailyChangePercent(merged),
+                history = remote,
+                openPrice = remote.firstOrNull()?.price,
+                highPrice = remote.maxOfOrNull { p -> p.price },
+                lowPrice = remote.minOfOrNull { p -> p.price },
+                dailyChangePercent = computeDailyChangePercent(remote),
                 staleData = isStale
             )
         }

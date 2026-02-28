@@ -117,6 +117,7 @@ class GoldRepositoryImpl(
             Timeframe.YEAR_5 -> 365L * 24 * 60 * 60 * 5
             Timeframe.MAX -> Long.MAX_VALUE
         }
-        return history.filter { it.timestamp >= (now - windowSeconds) }
+        val filtered = history.filter { it.timestamp >= (now - windowSeconds) }
+        return if (filtered.isNotEmpty()) filtered else history.takeLast(30)
     }
 }
