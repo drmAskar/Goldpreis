@@ -36,6 +36,7 @@ data class UiState(
     val parityWarning: Boolean = false,
     val dataSourceLabel: String = "gold-api.com + stooq.com + frankfurter.app",
     val staleData: Boolean = false,
+    val insufficientIntradayData: Boolean = false,
     val error: String? = null
 )
 
@@ -126,26 +127,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun loadHistory(timeframe: Timeframe) = viewModelScope.launch {
-        val currency = _uiState.value.settings.currency
         _uiState.update { it.copy(historyLoading = true) }
-        val remote = runCatching {
-            repository.fetchHistoricalPrices(currency, timeframe)
-        }.getOrDefault(emptyList())
-            .distinctBy { it.timestamp }
-            .sortedBy { it.timestamp }
+
+        val history = if (timeframe == Timeframe.DAY_1) {
+            val now = System.currentTimeMillis() / 1000
+            val minTimestamp = now - (24L * 60 * 60)
+            runCatching {
+                prefs.historyFlow.first()
+                    .asSequence()
+                    .filter { it.timestamp >= minTimestamp }
+                    .distinctBy { it.timestamp }
+                    .sortedBy { it.timestamp }
+                    .toList()
+            }.getOrDefault(emptyList())
+        } else {
+            val currency = _uiState.value.settings.currency
+            runCatching {
+                repository.fetchHistoricalPrices(currency, timeframe)
+            }.getOrDefault(emptyList())
+                .distinctBy { it.timestamp }
+                .sortedBy { it.timestamp }
+        }
 
         val now = System.currentTimeMillis() / 1000
-        val isStale = remote.lastOrNull()?.let { abs(now - it.timestamp) > 48 * 60 * 60 } ?: false
+        val isStale = history.lastOrNull()?.let { abs(now - it.timestamp) > 48 * 60 * 60 } ?: false
+        val insufficientIntradayData = timeframe == Timeframe.DAY_1 && history.size < 2
 
         _uiState.update {
             it.copy(
                 historyLoading = false,
-                history = remote,
-                openPrice = remote.firstOrNull()?.price,
-                highPrice = remote.maxOfOrNull { p -> p.price },
-                lowPrice = remote.minOfOrNull { p -> p.price },
-                dailyChangePercent = computeDailyChangePercent(remote),
-                staleData = isStale
+                history = history,
+                openPrice = history.firstOrNull()?.price,
+                highPrice = history.maxOfOrNull { p -> p.price },
+                lowPrice = history.minOfOrNull { p -> p.price },
+                dailyChangePercent = computeDailyChangePercent(history),
+                staleData = isStale,
+                insufficientIntradayData = insufficientIntradayData
             )
         }
     }

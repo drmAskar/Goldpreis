@@ -44,4 +44,5 @@
     <string name="label_alert_below">تنبيه عندما يكون السعر أقل من</string>
     <string name="notification_above_body">السعر الحالي %1$s أعلى من الحد %2$s</string>
     <string name="notification_below_body">السعر الحالي %1$s أقل من الحد %2$s</string>
+    <string name="insufficient_intraday_data">لا توجد بيانات لحظية كافية بعد لعرض 1D. اترك التطبيق يعمل قليلًا ثم حدّث.</string>
 </resources>

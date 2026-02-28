@@ -44,4 +44,5 @@
     <string name="label_alert_below">Alarm wenn Preis unter</string>
     <string name="notification_above_body">Aktueller Preis %1$s liegt über der Schwelle %2$s</string>
     <string name="notification_below_body">Aktueller Preis %1$s liegt unter der Schwelle %2$s</string>
+    <string name="insufficient_intraday_data">Noch nicht genügend Intraday-Daten für 1D. App kurz laufen lassen und dann aktualisieren.</string>
 </resources>

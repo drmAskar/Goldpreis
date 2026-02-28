@@ -218,7 +218,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
         }
 
         AnimatedVisibility(
-            visible = state.history.isNotEmpty(),
+            visible = state.history.isNotEmpty() || state.historyLoading || state.insufficientIntradayData,
             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 })
         ) {
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
@@ -233,6 +233,12 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                     )
                     if (state.historyLoading) {
                         Text(stringResource(R.string.loading_history))
+                    }
+                    if (selectedTimeframe == Timeframe.DAY_1 && state.insufficientIntradayData) {
+                        Text(
+                            text = stringResource(R.string.insufficient_intraday_data),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     PriceChart(
                         history = state.history,
