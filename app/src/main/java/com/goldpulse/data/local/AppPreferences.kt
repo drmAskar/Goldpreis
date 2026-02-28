@@ -14,6 +14,18 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import java.util.UUID
+
+enum class AlertDirection { ABOVE, BELOW }
+
+data class PriceAlert(
+    val id: String = UUID.randomUUID().toString(),
+    val currency: String,
+    val direction: AlertDirection,
+    val targetPrice: Double,
+    val enabled: Boolean = true,
+    val lastTriggeredAt: Long? = null
+)
 
 data class SettingsState(
     val thresholdPercent: Double = 1.0,
@@ -52,6 +64,17 @@ class AppPreferences(context: Context) {
         )
     }
 
+    val alertsFlow: Flow<List<PriceAlert>> = dataStore.data.map { prefs ->
+        val json = prefs[KEY_ALERTS_JSON] ?: return@map emptyList()
+        val type = object : TypeToken<List<PriceAlert>>() {}.type
+        runCatching { gson.fromJson<List<PriceAlert>>(json, type) }
+            .getOrDefault(emptyList())
+            .mapNotNull { alert ->
+                if (alert.currency.isBlank() || alert.targetPrice <= 0.0) null
+                else alert.copy(currency = alert.currency.uppercase())
+            }
+    }
+
     val lastPriceFlow: Flow<Double?> = dataStore.data.map { it[KEY_LAST_PRICE] }
 
     val lastPricesByCurrencyFlow: Flow<Map<String, Double>> = dataStore.data.map { prefs ->
@@ -82,6 +105,12 @@ class AppPreferences(context: Context) {
             prefs[KEY_SHOW_MA] = settings.showMovingAverages
             prefs[KEY_ALERT_ABOVE] = settings.alertAbovePrice?.toString() ?: ""
             prefs[KEY_ALERT_BELOW] = settings.alertBelowPrice?.toString() ?: ""
+        }
+    }
+
+    suspend fun saveAlerts(alerts: List<PriceAlert>) {
+        dataStore.edit { prefs ->
+            prefs[KEY_ALERTS_JSON] = gson.toJson(alerts)
         }
     }
 
@@ -141,5 +170,6 @@ class AppPreferences(context: Context) {
         private val KEY_SHOW_MA = booleanPreferencesKey("show_moving_averages")
         private val KEY_ALERT_ABOVE = stringPreferencesKey("alert_above_price")
         private val KEY_ALERT_BELOW = stringPreferencesKey("alert_below_price")
+        private val KEY_ALERTS_JSON = stringPreferencesKey("price_alerts_json")
     }
 }

@@ -3,7 +3,9 @@ package com.goldpulse
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.goldpulse.data.local.AlertDirection
 import com.goldpulse.data.local.AppPreferences
+import com.goldpulse.data.local.PriceAlert
 import com.goldpulse.data.local.SettingsState
 import com.goldpulse.data.model.PricePoint
 import com.goldpulse.data.network.NetworkModule
@@ -21,6 +23,8 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
+enum class DataQuality { LIVE, DELAYED, PARTIAL }
+
 data class UiState(
     val loading: Boolean = false,
     val historyLoading: Boolean = false,
@@ -37,6 +41,8 @@ data class UiState(
     val dataSourceLabel: String = "gold-api.com + stooq.com + frankfurter.app",
     val staleData: Boolean = false,
     val insufficientIntradayData: Boolean = false,
+    val alerts: List<PriceAlert> = emptyList(),
+    val quality: DataQuality = DataQuality.DELAYED,
     val error: String? = null
 )
 
@@ -50,6 +56,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         observeSettings()
+        observeAlerts()
         refreshPrice()
     }
 
@@ -57,6 +64,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         prefs.settingsFlow.collect { settings ->
             _uiState.update { it.copy(settings = settings) }
             loadHistory(currentTimeframe)
+        }
+    }
+
+    private fun observeAlerts() = viewModelScope.launch {
+        prefs.alertsFlow.collect { alerts ->
+            _uiState.update { it.copy(alerts = alerts.sortedBy { a -> a.currency + a.targetPrice }) }
         }
     }
 
@@ -100,12 +113,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
             val time = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
             _uiState.update {
+                val partial = prices.size < currencies.size
                 it.copy(
                     currentPrice = primaryValue ?: it.currentPrice,
                     pricesByCurrency = prices,
                     lastUpdatedText = time,
                     parityWarning = false,
-                    staleData = primaryValue == null
+                    staleData = primaryValue == null,
+                    quality = when {
+                        partial -> DataQuality.PARTIAL
+                        primaryValue == null -> DataQuality.DELAYED
+                        else -> DataQuality.LIVE
+                    }
                 )
             }
 
@@ -114,7 +133,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _uiState.update { state ->
                 state.copy(
                     error = it.message ?: "Unknown error",
-                    staleData = true
+                    staleData = true,
+                    quality = DataQuality.DELAYED
                 )
             }
         }
@@ -124,6 +144,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun onTimeframeChanged(timeframe: Timeframe) {
         currentTimeframe = timeframe
         loadHistory(timeframe)
+    }
+
+    fun addAlert(currency: String, direction: AlertDirection, targetPrice: Double) = viewModelScope.launch {
+        if (targetPrice <= 0.0) return@launch
+        val current = prefs.alertsFlow.first()
+        val next = current + PriceAlert(currency = currency.uppercase(), direction = direction, targetPrice = targetPrice)
+        prefs.saveAlerts(next)
+    }
+
+    fun removeAlert(alertId: String) = viewModelScope.launch {
+        val current = prefs.alertsFlow.first()
+        prefs.saveAlerts(current.filterNot { it.id == alertId })
     }
 
     private fun loadHistory(timeframe: Timeframe) = viewModelScope.launch {
@@ -149,7 +181,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 lowPrice = history.minOfOrNull { p -> p.price },
                 dailyChangePercent = computeDailyChangePercent(history),
                 staleData = isStale,
-                insufficientIntradayData = insufficientIntradayData
+                insufficientIntradayData = insufficientIntradayData,
+                quality = when {
+                    it.quality == DataQuality.PARTIAL -> DataQuality.PARTIAL
+                    insufficientIntradayData || isStale -> DataQuality.DELAYED
+                    else -> DataQuality.LIVE
+                }
             )
         }
     }
