@@ -94,7 +94,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     timestamp = System.currentTimeMillis() / 1000
                 )
 
-                prefs.saveLastPrice(primaryPoint.price)
+                prefs.saveLastPrice(primaryPoint.price, primary)
                 prefs.appendHistory(primaryPoint)
             }
 
@@ -129,25 +129,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun loadHistory(timeframe: Timeframe) = viewModelScope.launch {
         _uiState.update { it.copy(historyLoading = true) }
 
-        val history = if (timeframe == Timeframe.DAY_1) {
-            val now = System.currentTimeMillis() / 1000
-            val minTimestamp = now - (24L * 60 * 60)
-            runCatching {
-                prefs.historyFlow.first()
-                    .asSequence()
-                    .filter { it.timestamp >= minTimestamp }
-                    .distinctBy { it.timestamp }
-                    .sortedBy { it.timestamp }
-                    .toList()
-            }.getOrDefault(emptyList())
-        } else {
-            val currency = _uiState.value.settings.currency
-            runCatching {
-                repository.fetchHistoricalPrices(currency, timeframe)
-            }.getOrDefault(emptyList())
-                .distinctBy { it.timestamp }
-                .sortedBy { it.timestamp }
-        }
+        val currency = _uiState.value.settings.currency
+        val history = runCatching {
+            repository.fetchHistoricalPrices(currency, timeframe)
+        }.getOrDefault(emptyList())
+            .distinctBy { it.timestamp }
+            .sortedBy { it.timestamp }
 
         val now = System.currentTimeMillis() / 1000
         val isStale = history.lastOrNull()?.let { abs(now - it.timestamp) > 48 * 60 * 60 } ?: false

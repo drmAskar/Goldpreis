@@ -12,6 +12,7 @@ import com.goldpulse.data.model.PricePoint
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 
 data class SettingsState(
@@ -53,6 +54,15 @@ class AppPreferences(context: Context) {
 
     val lastPriceFlow: Flow<Double?> = dataStore.data.map { it[KEY_LAST_PRICE] }
 
+    val lastPricesByCurrencyFlow: Flow<Map<String, Double>> = dataStore.data.map { prefs ->
+        val json = prefs[KEY_LAST_PRICES_BY_CURRENCY] ?: return@map emptyMap()
+        val type = object : TypeToken<Map<String, Double>>() {}.type
+        runCatching {
+            gson.fromJson<Map<String, Double>>(json, type)
+                .mapKeys { it.key.uppercase() }
+        }.getOrDefault(emptyMap())
+    }
+
     val historyFlow: Flow<List<PricePoint>> = dataStore.data.map { prefs ->
         val json = prefs[KEY_HISTORY] ?: return@map emptyList()
         val type = object : TypeToken<List<PricePoint>>() {}.type
@@ -75,8 +85,22 @@ class AppPreferences(context: Context) {
         }
     }
 
-    suspend fun saveLastPrice(price: Double) {
-        dataStore.edit { it[KEY_LAST_PRICE] = price }
+    suspend fun saveLastPrice(price: Double, currency: String? = null) {
+        dataStore.edit { prefs ->
+            prefs[KEY_LAST_PRICE] = price
+            currency?.let {
+                val type = object : TypeToken<Map<String, Double>>() {}.type
+                val current = runCatching {
+                    gson.fromJson<Map<String, Double>>(prefs[KEY_LAST_PRICES_BY_CURRENCY] ?: "{}", type)
+                }.getOrDefault(emptyMap())
+                val updated = current.toMutableMap().apply { put(it.uppercase(), price) }
+                prefs[KEY_LAST_PRICES_BY_CURRENCY] = gson.toJson(updated)
+            }
+        }
+    }
+
+    suspend fun getLastPriceForCurrency(currency: String): Double? {
+        return lastPricesByCurrencyFlow.map { it[currency.uppercase()] }.firstOrNull()
     }
 
     suspend fun appendHistory(point: PricePoint, maxItems: Int = 600) {
@@ -109,6 +133,7 @@ class AppPreferences(context: Context) {
         private val KEY_CURRENCIES = stringPreferencesKey("target_currencies_csv")
         private val KEY_THEME = stringPreferencesKey("theme_name")
         private val KEY_LAST_PRICE = doublePreferencesKey("last_price")
+        private val KEY_LAST_PRICES_BY_CURRENCY = stringPreferencesKey("last_prices_by_currency_json")
         private val KEY_HISTORY = stringPreferencesKey("price_history_json")
         private val KEY_BG_ENABLED = booleanPreferencesKey("background_notifications_enabled")
         private val KEY_PERSISTENT_ENABLED = booleanPreferencesKey("persistent_foreground_enabled")

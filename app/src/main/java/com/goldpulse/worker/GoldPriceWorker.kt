@@ -27,9 +27,9 @@ class GoldPriceWorker(
 
         return try {
             val latest = repository.fetchCurrentPrice(settings.currency)
-            val previous = preferences.lastPriceFlow.first()
+            val previous = preferences.getLastPriceForCurrency(settings.currency)
 
-            preferences.saveLastPrice(latest.price)
+            preferences.saveLastPrice(latest.price, settings.currency)
             preferences.appendHistory(latest)
 
             var shouldNotify = false

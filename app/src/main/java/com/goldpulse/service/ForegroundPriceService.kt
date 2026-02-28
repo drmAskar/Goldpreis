@@ -61,15 +61,12 @@ class ForegroundPriceService : Service() {
 
                 val display = runCatching {
                     val latest = repo.fetchCurrentPrice(settings.currency)
-                    prefs.saveLastPrice(latest.price)
+                    prefs.saveLastPrice(latest.price, settings.currency)
                     prefs.appendHistory(latest)
                     val updated = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
 
-                    val history24h = prefs.historyFlow.first()
-                        .asSequence()
-                        .filter { it.timestamp >= (latest.timestamp - 24L * 60 * 60) }
+                    val history24h = repo.fetchHistoricalPrices(settings.currency, com.goldpulse.ui.components.Timeframe.DAY_1)
                         .sortedBy { it.timestamp }
-                        .toList()
                     val previous = history24h.dropLast(1).lastOrNull()
 
                     val trendPercent = previous?.price

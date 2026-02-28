@@ -32,8 +32,10 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -97,28 +99,33 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 18.dp, vertical = 14.dp)
             .verticalScroll(rememberScrollState())
             .alpha(animatedAlpha),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(text = stringResource(R.string.last_update, state.lastUpdatedText.ifBlank { "—" }), style = MaterialTheme.typography.bodySmall)
-                Text(text = stringResource(R.string.data_source_label, state.dataSourceLabel), style = MaterialTheme.typography.bodySmall)
+                Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(text = stringResource(R.string.last_update, state.lastUpdatedText.ifBlank { "—" }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = stringResource(R.string.data_source_label, state.dataSourceLabel), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = { showSettings = true }) {
                 Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.open_settings))
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     selectedCurrencies.forEach { currency ->
@@ -138,7 +145,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                 val primary = state.settings.currency
                 val currentPrice = state.currentPrice
                 if (currentPrice != null) {
-                    Text(text = stringResource(R.string.label_spot_price, formatPrice(currentPrice, primary)), style = MaterialTheme.typography.titleMedium)
+                    Text(text = stringResource(R.string.label_spot_price, formatPrice(currentPrice, primary)), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 }
 
                 FlowRow(
@@ -221,8 +228,13 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
             visible = state.history.isNotEmpty() || state.historyLoading || state.insufficientIntradayData,
             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 })
         ) {
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.title_trend), style = MaterialTheme.typography.titleMedium)
                     TimeframeSelector(
                         selected = selectedTimeframe,
@@ -270,10 +282,14 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
 private fun SnapshotChip(label: String, value: String) {
     AssistChip(
         onClick = {},
+        shape = RoundedCornerShape(14.dp),
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
         label = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(text = label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                Text(text = value, style = MaterialTheme.typography.bodyMedium)
+                Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
         }
     )

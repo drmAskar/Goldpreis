@@ -44,6 +44,7 @@ private fun segmentedHistory(history: List<PricePoint>, timeframe: Timeframe): L
 
     val base = when {
         filtered.size >= 2 -> filtered
+        timeframe == Timeframe.DAY_1 -> filtered
         sorted.size >= 2 -> sorted.takeLast(600)
         else -> sorted
     }
@@ -163,8 +164,8 @@ fun PriceChart(
             chart.legend.isEnabled = true
             chart.legend.textSize = 10f
             // Keep a wider safe area so exported bitmaps preserve axis labels without clipping.
-            chart.setViewPortOffsets(72f, 28f, 28f, 76f)
-            chart.setExtraOffsets(8f, 4f, 8f, 12f)
+            chart.setViewPortOffsets(84f, 34f, 36f, 92f)
+            chart.setExtraOffsets(14f, 8f, 14f, 18f)
 
             chart.xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM

@@ -50,5 +50,5 @@
     <string name="label_alert_below">Alert when price is below</string>
     <string name="notification_above_body">Current price %1$s is above threshold %2$s</string>
     <string name="notification_below_body">Current price %1$s is below threshold %2$s</string>
-    <string name="insufficient_intraday_data">Not enough intraday data yet for 1D. Keep the app running and refresh in a bit.</string>
+    <string name="insufficient_intraday_data">Not enough remote 24h market data is available for 1D right now. Try again shortly.</string>
 </resources>
