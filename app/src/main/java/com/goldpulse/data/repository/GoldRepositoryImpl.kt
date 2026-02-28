@@ -25,15 +25,33 @@ class GoldRepositoryImpl(
         val value = retryWithBackoff {
             val response = api.getGoldPrice()
             val usdPrice = response.price
-            val finalPrice = if (normalizedCurrency == "USD") usdPrice else usdPrice * fxRate(normalizedCurrency)
+            val finalPrice = if (normalizedCurrency == "USD") {
+                usdPrice
+            } else {
+                val fx = fxRate(normalizedCurrency)
+                    ?: throw IllegalStateException("FX rate unavailable for $normalizedCurrency")
+                usdPrice * fx
+            }
             PricePoint(
                 price = finalPrice,
                 timestamp = response.timestamp ?: (System.currentTimeMillis() / 1000)
             )
         }
 
-        val result = value ?: fetchStooqDailySeries(normalizedCurrency).lastOrNull()
-            ?: throw IllegalStateException("No market data available")
+        val result = if (value != null) {
+            value
+        } else {
+            val direct = fetchStooqDailySeries(normalizedCurrency).lastOrNull()
+            if (direct != null) {
+                direct
+            } else {
+                if (normalizedCurrency == "USD") {
+                    fetchStooqDailySeries("USD").lastOrNull()
+                } else {
+                    null
+                }
+            }
+        } ?: throw IllegalStateException("No market data available for $normalizedCurrency")
 
         currentCache[normalizedCurrency] = System.currentTimeMillis() to result
         return result
@@ -52,10 +70,18 @@ class GoldRepositoryImpl(
             trimByTimeframe(directSeries, timeframe)
         } else {
             val usdSeries = fetchStooqDailySeries("USD")
-            if (usdSeries.isEmpty()) emptyList() else {
-                val fx = if (normalizedCurrency == "USD") 1.0 else fxRate(normalizedCurrency)
-                val converted = usdSeries.map { it.copy(price = it.price * fx) }
-                trimByTimeframe(converted, timeframe)
+            if (usdSeries.isEmpty()) {
+                emptyList()
+            } else if (normalizedCurrency == "USD") {
+                trimByTimeframe(usdSeries, timeframe)
+            } else {
+                val fx = fxRate(normalizedCurrency)
+                if (fx == null) {
+                    historyCache[cacheKey]?.second ?: emptyList()
+                } else {
+                    val converted = usdSeries.map { it.copy(price = it.price * fx) }
+                    trimByTimeframe(converted, timeframe)
+                }
             }
         }
 
@@ -63,11 +89,12 @@ class GoldRepositoryImpl(
         return result
     }
 
-    private suspend fun fxRate(currency: String): Double {
+    private suspend fun fxRate(currency: String): Double? {
+        if (currency == "USD") return 1.0
         val fx = retryWithBackoff {
             api.getFxRates("https://api.frankfurter.app/latest?from=USD&to=$currency")
         }
-        return fx?.rates?.get(currency) ?: 1.0
+        return fx?.rates?.get(currency)
     }
 
     private suspend fun fetchStooqDailySeries(currency: String): List<PricePoint> {

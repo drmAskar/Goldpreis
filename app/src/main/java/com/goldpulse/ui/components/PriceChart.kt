@@ -85,6 +85,13 @@ private fun movingAverage(points: List<PricePoint>, period: Int): List<Double?> 
     return out
 }
 
+private fun hasDailyCadence(points: List<PricePoint>): Boolean {
+    if (points.size < 2) return false
+    val gaps = points.zipWithNext { a, b -> b.timestamp - a.timestamp }
+    val avgGap = gaps.average()
+    return avgGap >= 18L * 60 * 60
+}
+
 @Composable
 fun PriceChart(
     history: List<PricePoint>,
@@ -170,7 +177,7 @@ fun PriceChart(
                         val index = value.toInt().coerceIn(0, (visibleHistory.size - 1).coerceAtLeast(0))
                         val millis = visibleHistory.getOrNull(index)?.timestamp?.times(1000) ?: return ""
                         val pattern = when (timeframe) {
-                            Timeframe.DAY_1 -> "HH:mm"
+                            Timeframe.DAY_1 -> if (hasDailyCadence(visibleHistory)) "dd MMM" else "HH:mm"
                             Timeframe.WEEK_1 -> "EEE"
                             Timeframe.MONTH_1, Timeframe.MONTH_3, Timeframe.MONTH_6 -> "dd MMM"
                             Timeframe.YEAR_1 -> "MMM yy"

@@ -82,26 +82,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             val primary = currencies.first()
-            val primaryValue = prices[primary] ?: runCatching { repository.fetchCurrentPrice(primary).price }.getOrNull()
+            val primaryValue = prices[primary]
+                ?: runCatching { repository.fetchCurrentPrice(primary).price }.getOrNull()
                 ?: oldPrices[primary]
-                ?: 0.0
-            prices[primary] = primaryValue
-            val primaryPoint = PricePoint(
-                price = primaryValue,
-                timestamp = System.currentTimeMillis() / 1000
-            )
 
-            prefs.saveLastPrice(primaryPoint.price)
-            prefs.appendHistory(primaryPoint)
+            if (primaryValue != null) {
+                prices[primary] = primaryValue
+                val primaryPoint = PricePoint(
+                    price = primaryValue,
+                    timestamp = System.currentTimeMillis() / 1000
+                )
+
+                prefs.saveLastPrice(primaryPoint.price)
+                prefs.appendHistory(primaryPoint)
+            }
 
             val time = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
             _uiState.update {
                 it.copy(
-                    currentPrice = primaryPoint.price,
+                    currentPrice = primaryValue ?: it.currentPrice,
                     pricesByCurrency = prices,
                     lastUpdatedText = time,
-                    parityWarning = !isParityConsistent(prices),
-                    staleData = false
+                    parityWarning = false,
+                    staleData = primaryValue == null
                 )
             }
 
@@ -149,19 +152,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun computeDailyChangePercent(history: List<PricePoint>): Double? {
         if (history.size < 2) return null
-        val last = history.last().price
-        val dayAgoTs = (System.currentTimeMillis() / 1000) - (24 * 60 * 60)
-        val base = history.lastOrNull { it.timestamp <= dayAgoTs }?.price ?: history.first().price
-        if (base == 0.0) return null
-        return ((last - base) / base) * 100.0
-    }
 
-    private fun isParityConsistent(pricesByCurrency: Map<String, Double>): Boolean {
-        if (pricesByCurrency.size <= 1) return true
-        val values = pricesByCurrency.values.filter { it > 0 }
-        if (values.size <= 1) return true
-        val avg = values.average()
-        return values.all { kotlin.math.abs(it - avg) / avg < 0.35 }
+        val now = System.currentTimeMillis() / 1000
+        val minAge = 20L * 60 * 60
+        val maxAge = 28L * 60 * 60
+
+        val latest = history.lastOrNull() ?: return null
+        val candidate = history
+            .dropLast(1)
+            .map { point -> point to (now - point.timestamp) }
+            .filter { (_, age) -> age in minAge..maxAge }
+            .minByOrNull { (_, age) -> abs(age - 24L * 60 * 60) }
+            ?.first
+            ?: return null
+
+        if (candidate.price == 0.0) return null
+        return ((latest.price - candidate.price) / candidate.price) * 100.0
     }
 
     fun updateSettings(settings: SettingsState) = viewModelScope.launch {
