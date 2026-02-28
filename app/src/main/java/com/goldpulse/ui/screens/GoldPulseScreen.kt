@@ -211,9 +211,6 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                 if (state.parityWarning) {
                     Text(text = stringResource(R.string.parity_warning), color = MaterialTheme.colorScheme.error)
                 }
-                if (state.seriesMismatchWarning) {
-                    Text(text = stringResource(R.string.series_mismatch_warning), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
                 if (!state.error.isNullOrBlank()) {
                     Text(text = stringResource(R.string.error_transparency, state.error ?: ""), color = MaterialTheme.colorScheme.error)
                 }
