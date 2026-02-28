@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
@@ -115,7 +114,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(selected = tab == MainTab.HOME, onClick = { tab = MainTab.HOME }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-                NavigationBarItem(selected = tab == MainTab.CHARTS, onClick = { tab = MainTab.CHARTS }, icon = { Icon(Icons.Default.ShowChart, null) }, label = { Text("Charts") })
+                NavigationBarItem(selected = tab == MainTab.CHARTS, onClick = { tab = MainTab.CHARTS }, icon = { Icon(Icons.Default.Refresh, null) }, label = { Text("Charts") })
                 NavigationBarItem(selected = tab == MainTab.ALERTS, onClick = { tab = MainTab.ALERTS }, icon = { Icon(Icons.Default.Notifications, null) }, label = { Text("Alerts") })
                 NavigationBarItem(selected = tab == MainTab.SETTINGS, onClick = { tab = MainTab.SETTINGS }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
             }
