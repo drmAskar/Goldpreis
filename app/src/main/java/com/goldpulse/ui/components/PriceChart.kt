@@ -89,7 +89,8 @@ private fun movingAverage(points: List<PricePoint>, period: Int): List<Double?> 
 fun PriceChart(
     history: List<PricePoint>,
     timeframe: Timeframe,
-    showMovingAverages: Boolean = true
+    showMovingAverages: Boolean = true,
+    onChartReady: (LineChart) -> Unit = {}
 ) {
     val visibleHistory = segmentedHistory(history, timeframe)
 
@@ -97,8 +98,11 @@ fun PriceChart(
         modifier = Modifier
             .fillMaxWidth()
             .height(260.dp),
-        factory = { context -> LineChart(context) },
+        factory = { context ->
+            LineChart(context).also(onChartReady)
+        },
         update = { chart ->
+            onChartReady(chart)
             val entries = visibleHistory.mapIndexed { index, point -> Entry(index.toFloat(), point.price.toFloat()) }
             val mainSet = LineDataSet(entries, "Gold").apply {
                 color = Color.parseColor("#D4AF37")

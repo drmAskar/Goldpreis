@@ -1,6 +1,7 @@
 package com.goldpulse.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -18,10 +19,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -58,12 +60,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.github.mikephil.charting.charts.LineChart
 import com.goldpulse.MainViewModel
 import com.goldpulse.R
 import com.goldpulse.data.local.SettingsState
 import com.goldpulse.ui.components.PriceChart
 import com.goldpulse.ui.components.Timeframe
+import com.goldpulse.util.exportChartPng
 import com.goldpulse.util.formatPrice
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 private val allCurrencies = listOf("USD", "EUR", "GBP", "AED", "TRY", "SAR")
@@ -74,6 +81,9 @@ private val allThemes = listOf("Purple", "Blue", "Emerald", "Dark")
 fun GoldPulseScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
+    var chartRef by remember { mutableStateOf<LineChart?>(null) }
+
     val animatedAlpha by animateFloatAsState(
         targetValue = if (state.loading) 0.75f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -146,14 +156,45 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                     IconButton(onClick = viewModel::refreshPrice) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh))
                     }
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = {
-                        val prices = selectedCurrencies.joinToString("\n") { currency ->
-                            val price = state.pricesByCurrency[currency]
-                            if (price != null) "• $currency: ${formatPrice(price, currency)}" else "• $currency: —"
+                    Spacer(Modifier.width(4.dp))
+                    TextButton(onClick = {
+                        val chart = chartRef
+                        if (chart == null) {
+                            Toast.makeText(context, context.getString(R.string.export_unavailable), Toast.LENGTH_SHORT).show()
+                            return@TextButton
                         }
-                        val extra = context.getString(R.string.share_summary_line, selectedTimeframe.name)
-                        val content = context.getString(R.string.share_text, "$prices\n$extra", state.lastUpdatedText.ifBlank { "—" })
+                        scope.launch {
+                            val uri = withContext(Dispatchers.IO) {
+                                exportChartPng(context, chart.chartBitmap)
+                            }
+                            if (uri == null) {
+                                Toast.makeText(context, context.getString(R.string.export_failed), Toast.LENGTH_SHORT).show()
+                            } else {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "image/png"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.export_chart)))
+                            }
+                        }
+                    }) {
+                        Text(stringResource(R.string.export_chart))
+                    }
+                    IconButton(onClick = {
+                        val selectedCurrency = state.settings.currency
+                        val selectedPrice = state.pricesByCurrency[selectedCurrency] ?: state.currentPrice
+                        val details = listOf(
+                            context.getString(R.string.label_spot_price, selectedPrice?.let { formatPrice(it, selectedCurrency) } ?: "—"),
+                            "O: ${state.openPrice?.let { formatPrice(it, selectedCurrency) } ?: "—"}",
+                            "H: ${state.highPrice?.let { formatPrice(it, selectedCurrency) } ?: "—"}",
+                            "L: ${state.lowPrice?.let { formatPrice(it, selectedCurrency) } ?: "—"}",
+                            "24h: ${state.dailyChangePercent?.let { String.format(Locale.getDefault(), "%.2f%%", it) } ?: "—"}",
+                            context.getString(R.string.share_summary_line, selectedTimeframe.name),
+                            context.getString(R.string.last_update, state.lastUpdatedText.ifBlank { "—" })
+                        ).joinToString("\n")
+
+                        val content = context.getString(R.string.share_text, details, state.lastUpdatedText.ifBlank { "—" })
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, content)
@@ -169,6 +210,9 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                 }
                 if (state.parityWarning) {
                     Text(text = stringResource(R.string.parity_warning), color = MaterialTheme.colorScheme.error)
+                }
+                if (state.seriesMismatchWarning) {
+                    Text(text = stringResource(R.string.series_mismatch_warning), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (!state.error.isNullOrBlank()) {
                     Text(text = stringResource(R.string.error_transparency, state.error ?: ""), color = MaterialTheme.colorScheme.error)
@@ -196,7 +240,8 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                     PriceChart(
                         history = state.history,
                         timeframe = selectedTimeframe,
-                        showMovingAverages = state.settings.showMovingAverages
+                        showMovingAverages = state.settings.showMovingAverages,
+                        onChartReady = { chartRef = it }
                     )
                 }
             }
@@ -223,8 +268,8 @@ private fun SnapshotChip(label: String, value: String) {
     AssistChip(
         onClick = {},
         label = {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = "$label:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(text = label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                 Text(text = value, style = MaterialTheme.typography.bodyMedium)
             }
         }

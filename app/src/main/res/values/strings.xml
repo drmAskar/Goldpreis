@@ -18,6 +18,9 @@
     <string name="action_save">Save</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_share">Share</string>
+    <string name="export_chart">Export chart</string>
+    <string name="export_unavailable">Chart is not ready yet.</string>
+    <string name="export_failed">Could not export chart image.</string>
     <string name="action_cancel">Cancel</string>
     <string name="share_title">Share prices</string>
     <string name="share_text">GoldPulse\n%1$s\nLast update: %2$s</string>
@@ -38,6 +41,7 @@
     <string name="data_source_label">Source: %1$s</string>
     <string name="stale_data_warning">Data may be stale. Last sync is older than expected.</string>
     <string name="parity_warning">Currency parity warning: values are outside expected range.</string>
+    <string name="series_mismatch_warning">Some historical points were skipped due to currency mismatch. Refreshing usually resolves this.</string>
     <string name="error_transparency">Sync error: %1$s</string>
     <string name="share_summary_line">Timeframe: %1$s</string>
     <string name="label_alert_above">Alert when price is above</string>
