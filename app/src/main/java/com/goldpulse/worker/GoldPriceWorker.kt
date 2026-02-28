@@ -11,6 +11,8 @@ import com.goldpulse.data.network.NetworkModule
 import com.goldpulse.data.repository.GoldRepositoryImpl
 import com.goldpulse.util.NotificationHelper
 import com.goldpulse.util.formatPrice
+import com.goldpulse.util.formatPriceTimestamp
+import com.goldpulse.util.formatPriceType
 import com.goldpulse.util.percentChange
 import kotlinx.coroutines.flow.first
 import java.util.Locale
@@ -34,41 +36,37 @@ class GoldPriceWorker(
                 .filter { it.isNotBlank() }
                 .ifEmpty { listOf(settings.currency.uppercase()) }
 
-            val latestByCurrency = mutableMapOf<String, Double>()
+            val latestByCurrency = mutableMapOf<String, com.goldpulse.data.model.PricePoint>()
+            val primaryCurrency = settings.currency.uppercase()
+            val previousPrimary = preferences.getLastPriceForCurrency(primaryCurrency)
             currencies.forEach { currency ->
-                runCatching { repository.fetchCurrentPrice(currency).price }
+                runCatching { repository.fetchCurrentPrice(currency) }
                     .getOrNull()
                     ?.let { latest ->
                         latestByCurrency[currency] = latest
-                        preferences.saveLastPrice(latest, currency)
+                        preferences.saveLastPrice(latest.price, currency)
                     }
             }
 
-            latestByCurrency[settings.currency.uppercase()]?.let { primaryPrice ->
-                preferences.appendHistory(
-                    com.goldpulse.data.model.PricePoint(
-                        price = primaryPrice,
-                        timestamp = System.currentTimeMillis() / 1000
-                    )
-                )
+            latestByCurrency[settings.currency.uppercase()]?.let { primaryPoint ->
+                preferences.appendHistory(primaryPoint)
             }
 
             var shouldNotify = false
             var reasonBody: String? = null
 
-            val primaryCurrency = settings.currency.uppercase()
             val latestPrimary = latestByCurrency[primaryCurrency]
             if (latestPrimary != null) {
-                val previous = preferences.getLastPriceForCurrency(primaryCurrency)
-                if (previous != null) {
-                    val change = kotlin.math.abs(percentChange(previous, latestPrimary))
+                if (previousPrimary != null) {
+                    val change = kotlin.math.abs(percentChange(previousPrimary, latestPrimary.price))
                     if (change >= settings.thresholdPercent) {
                         shouldNotify = true
-                        reasonBody = applicationContext.getString(
+                        val baseBody = applicationContext.getString(
                             R.string.notification_body,
                             String.format(Locale.US, "%.2f", change),
-                            formatPrice(latestPrimary, primaryCurrency)
+                            formatPrice(latestPrimary.price, primaryCurrency)
                         )
+                        reasonBody = "$baseBody\n${latestPrimary.sourceLabel ?: "—"} • ${formatPriceType(latestPrimary.priceType)} • ${formatPriceTimestamp(latestPrimary.timestamp)}"
                     }
                 }
             }
@@ -95,25 +93,26 @@ class GoldPriceWorker(
                     if (!alert.enabled) return@map alert
 
                     val triggered = when (alert.direction) {
-                        AlertDirection.ABOVE -> latest >= alert.targetPrice
-                        AlertDirection.BELOW -> latest <= alert.targetPrice
+                        AlertDirection.ABOVE -> latest.price >= alert.targetPrice
+                        AlertDirection.BELOW -> latest.price <= alert.targetPrice
                     }
 
                     val inCooldown = alert.lastTriggeredAt?.let { now - it < cooldownMs } ?: false
                     if (triggered && !inCooldown) {
                         shouldNotify = true
-                        reasonBody = when (alert.direction) {
+                        val baseBody = when (alert.direction) {
                             AlertDirection.ABOVE -> applicationContext.getString(
                                 R.string.notification_above_body,
-                                formatPrice(latest, alert.currency),
+                                formatPrice(latest.price, alert.currency),
                                 formatPrice(alert.targetPrice, alert.currency)
                             )
                             AlertDirection.BELOW -> applicationContext.getString(
                                 R.string.notification_below_body,
-                                formatPrice(latest, alert.currency),
+                                formatPrice(latest.price, alert.currency),
                                 formatPrice(alert.targetPrice, alert.currency)
                             )
                         }
+                        reasonBody = "$baseBody\n${latest.sourceLabel ?: "—"} • ${formatPriceType(latest.priceType)} • ${formatPriceTimestamp(latest.timestamp)}"
                         changed = true
                         alert.copy(lastTriggeredAt = now)
                     } else {

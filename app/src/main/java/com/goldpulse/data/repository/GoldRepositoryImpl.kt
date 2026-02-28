@@ -24,17 +24,23 @@ class GoldRepositoryImpl(
 
         val value = retryWithBackoff {
             val response = api.getGoldPrice()
-            val usdPrice = response.price
+            val baseUsd = response.bid?.let { bid ->
+                response.ask?.let { ask -> (bid + ask) / 2.0 }
+            } ?: response.price
+            val priceType = if (response.bid != null && response.ask != null) "midpoint" else "last"
+
             val finalPrice = if (normalizedCurrency == "USD") {
-                usdPrice
+                baseUsd
             } else {
                 val fx = fxRate(normalizedCurrency)
                     ?: throw IllegalStateException("FX rate unavailable for $normalizedCurrency")
-                usdPrice * fx
+                baseUsd * fx
             }
             PricePoint(
                 price = finalPrice,
-                timestamp = response.timestamp ?: (System.currentTimeMillis() / 1000)
+                timestamp = response.timestamp ?: (System.currentTimeMillis() / 1000),
+                sourceLabel = if (normalizedCurrency == "USD") "gold-api.com" else "gold-api.com + frankfurter.app",
+                priceType = priceType
             )
         }
 
@@ -109,7 +115,9 @@ class GoldRepositoryImpl(
             val close = cols[4].toDoubleOrNull() ?: return@mapNotNull null
             PricePoint(
                 price = close,
-                timestamp = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
+                timestamp = date.atStartOfDay().toEpochSecond(ZoneOffset.UTC),
+                sourceLabel = "stooq.com",
+                priceType = "last"
             )
         }.toList().sortedBy { it.timestamp }
     }

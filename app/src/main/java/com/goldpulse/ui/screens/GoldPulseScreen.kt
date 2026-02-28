@@ -89,6 +89,7 @@ import java.util.Locale
 
 private val allCurrencies = listOf("USD", "EUR", "GBP", "AED", "TRY", "SAR")
 private val allThemes = listOf("Purple", "Blue", "Emerald", "Dark")
+private val intervalOptions = listOf(1, 5, 10, 15)
 
 enum class MainTab { HOME, CHARTS, ALERTS, SETTINGS }
 
@@ -129,7 +130,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                 .alpha(animatedAlpha),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Header(state.dataSourceLabel, state.lastUpdatedText, state.quality)
+            Header(state.dataSourceLabel, state.lastUpdatedText, state.priceTypeLabel, state.quality)
 
             AnimatedContent(targetState = tab, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab_transition") { target ->
                 when (target) {
@@ -144,6 +145,8 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                                 "O/H/L: ${state.openPrice?.let { formatPrice(it, currency) } ?: "—"} / ${state.highPrice?.let { formatPrice(it, currency) } ?: "—"} / ${state.lowPrice?.let { formatPrice(it, currency) } ?: "—"}",
                                 "Timeframe: ${selectedTimeframe.name}",
                                 "Currency: $currency",
+                                "Source: ${state.dataSourceLabel.ifBlank { "—" }}",
+                                "Price type: ${state.priceTypeLabel.ifBlank { "—" }}",
                                 "Timestamp: ${state.lastUpdatedText.ifBlank { "—" }}"
                             ).joinToString("\n")
                             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -220,12 +223,13 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun Header(source: String, updated: String, quality: DataQuality) {
+private fun Header(source: String, updated: String, priceType: String, quality: DataQuality) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column {
             Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(text = stringResource(R.string.last_update, updated.ifBlank { "—" }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = stringResource(R.string.data_source_label, source), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = stringResource(R.string.data_source_label, source.ifBlank { "—" }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = "Price type: ${priceType.ifBlank { "—" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         val (label, color) = when (quality) {
             DataQuality.LIVE -> "Live" to Color(0xFF2E7D32)
@@ -338,7 +342,7 @@ private fun AlertsTab(
 @Composable
 private fun SettingsPanel(current: SettingsState, onSave: (SettingsState) -> Unit) {
     var threshold by remember(current.thresholdPercent) { mutableStateOf(current.thresholdPercent.toString()) }
-    var interval by remember(current.checkIntervalMinutes) { mutableStateOf(current.checkIntervalMinutes.toString()) }
+    var interval by remember(current.checkIntervalMinutes) { mutableStateOf(current.checkIntervalMinutes) }
     var selectedTheme by remember(current.themeName) { mutableStateOf(current.themeName) }
     var bgEnabled by remember(current.backgroundNotificationsEnabled) { mutableStateOf(current.backgroundNotificationsEnabled) }
     var persistentEnabled by remember(current.persistentForegroundEnabled) { mutableStateOf(current.persistentForegroundEnabled) }
@@ -378,7 +382,16 @@ private fun SettingsPanel(current: SettingsState, onSave: (SettingsState) -> Uni
                 }
             }
             OutlinedTextField(value = threshold, onValueChange = { threshold = it }, label = { Text(stringResource(R.string.label_threshold)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = interval, onValueChange = { interval = it }, label = { Text(stringResource(R.string.label_interval)) }, modifier = Modifier.fillMaxWidth())
+            Text(text = stringResource(R.string.label_interval), style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                intervalOptions.forEach { option ->
+                    FilterChip(
+                        selected = interval == option,
+                        onClick = { interval = option },
+                        label = { Text("${option}m") }
+                    )
+                }
+            }
             ToggleRow(stringResource(R.string.label_background_notifications), bgEnabled) { bgEnabled = it }
             ToggleRow(stringResource(R.string.label_persistent_background), persistentEnabled) { persistentEnabled = it }
             ToggleRow(stringResource(R.string.label_persistent_ticker), persistentTickerEnabled) { persistentTickerEnabled = it }
@@ -392,7 +405,7 @@ private fun SettingsPanel(current: SettingsState, onSave: (SettingsState) -> Uni
                         currency = primary,
                         currenciesCsv = currencies.joinToString(","),
                         themeName = selectedTheme,
-                        checkIntervalMinutes = interval.toIntOrNull()?.coerceAtLeast(1) ?: current.checkIntervalMinutes,
+                        checkIntervalMinutes = interval.coerceAtLeast(1),
                         backgroundNotificationsEnabled = bgEnabled,
                         persistentForegroundEnabled = persistentEnabled,
                         persistentTickerEnabled = persistentTickerEnabled,

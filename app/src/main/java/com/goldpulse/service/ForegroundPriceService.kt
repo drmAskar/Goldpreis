@@ -9,6 +9,8 @@ import com.goldpulse.data.network.NetworkModule
 import com.goldpulse.data.repository.GoldRepositoryImpl
 import com.goldpulse.util.NotificationHelper
 import com.goldpulse.util.formatPrice
+import com.goldpulse.util.formatPriceTimestamp
+import com.goldpulse.util.formatPriceType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,8 +19,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
@@ -63,7 +63,7 @@ class ForegroundPriceService : Service() {
                     val latest = repo.fetchCurrentPrice(settings.currency)
                     prefs.saveLastPrice(latest.price, settings.currency)
                     prefs.appendHistory(latest)
-                    val updated = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+                    val updated = formatPriceTimestamp(latest.timestamp)
 
                     val history24h = repo.fetchHistoricalPrices(settings.currency, com.goldpulse.ui.components.Timeframe.DAY_1)
                         .sortedBy { it.timestamp }
@@ -79,7 +79,7 @@ class ForegroundPriceService : Service() {
                         else -> "▼"
                     }
 
-                    val body = if (settings.persistentTickerEnabled && trendPercent != null) {
+                    val core = if (settings.persistentTickerEnabled && trendPercent != null) {
                         val pctText = String.format(Locale.getDefault(), "%.2f%%", abs(trendPercent))
                         getString(
                             R.string.notification_persistent_ticker_body,
@@ -96,7 +96,7 @@ class ForegroundPriceService : Service() {
                         )
                     }
 
-                    body to if (settings.persistentTickerEnabled) trendUp else null
+                    "$core\n${latest.sourceLabel ?: "—"} • ${formatPriceType(latest.priceType)} • $updated" to if (settings.persistentTickerEnabled) trendUp else null
                 }.getOrElse {
                     getString(R.string.notification_persistent_error) to null
                 }

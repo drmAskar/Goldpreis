@@ -17,10 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import com.goldpulse.util.formatPriceTimestamp
+import com.goldpulse.util.formatPriceType
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.abs
 
 enum class DataQuality { LIVE, DELAYED, PARTIAL }
@@ -38,7 +37,8 @@ data class UiState(
     val lowPrice: Double? = null,
     val dailyChangePercent: Double? = null,
     val parityWarning: Boolean = false,
-    val dataSourceLabel: String = "gold-api.com + stooq.com + frankfurter.app",
+    val dataSourceLabel: String = "—",
+    val priceTypeLabel: String = "—",
     val staleData: Boolean = false,
     val insufficientIntradayData: Boolean = false,
     val alerts: List<PriceAlert> = emptyList(),
@@ -57,6 +57,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     init {
         observeSettings()
         observeAlerts()
+        observeLivePriceCache()
         refreshPrice()
     }
 
@@ -70,6 +71,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun observeAlerts() = viewModelScope.launch {
         prefs.alertsFlow.collect { alerts ->
             _uiState.update { it.copy(alerts = alerts.sortedBy { a -> a.currency + a.targetPrice }) }
+        }
+    }
+
+    private fun observeLivePriceCache() = viewModelScope.launch {
+        prefs.historyFlow.collect { history ->
+            val latest = history.maxByOrNull { it.timestamp } ?: return@collect
+            val primary = _uiState.value.settings.currency.uppercase()
+            _uiState.update { state ->
+                state.copy(
+                    currentPrice = latest.price,
+                    pricesByCurrency = state.pricesByCurrency.toMutableMap().apply { put(primary, latest.price) },
+                    lastUpdatedText = formatPriceTimestamp(latest.timestamp),
+                    dataSourceLabel = latest.sourceLabel ?: state.dataSourceLabel,
+                    priceTypeLabel = formatPriceType(latest.priceType)
+                )
+            }
         }
     }
 
@@ -87,37 +104,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 .ifEmpty { listOf("USD") }
 
             val oldPrices = _uiState.value.pricesByCurrency
-            val prices = linkedMapOf<String, Double>()
+            val points = linkedMapOf<String, PricePoint>()
             currencies.forEach { c ->
-                val fetched = runCatching { repository.fetchCurrentPrice(c).price }.getOrNull()
-                val fallback = oldPrices[c]
-                if (fetched != null) prices[c] = fetched
-                else if (fallback != null) prices[c] = fallback
+                val fetched = runCatching { repository.fetchCurrentPrice(c) }.getOrNull()
+                val fallback = oldPrices[c]?.let { PricePoint(price = it, timestamp = System.currentTimeMillis() / 1000) }
+                if (fetched != null) points[c] = fetched
+                else if (fallback != null) points[c] = fallback
             }
 
             val primary = currencies.first()
-            val primaryValue = prices[primary]
-                ?: runCatching { repository.fetchCurrentPrice(primary).price }.getOrNull()
-                ?: oldPrices[primary]
+            val primaryPoint = points[primary]
+                ?: runCatching { repository.fetchCurrentPrice(primary) }.getOrNull()
+                ?: oldPrices[primary]?.let { PricePoint(price = it, timestamp = System.currentTimeMillis() / 1000) }
 
-            if (primaryValue != null) {
-                prices[primary] = primaryValue
-                val primaryPoint = PricePoint(
-                    price = primaryValue,
-                    timestamp = System.currentTimeMillis() / 1000
-                )
-
+            if (primaryPoint != null) {
+                points[primary] = primaryPoint
                 prefs.saveLastPrice(primaryPoint.price, primary)
                 prefs.appendHistory(primaryPoint)
             }
 
-            val time = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+            val prices = points.mapValues { it.value.price }
+            val primaryValue = primaryPoint?.price
             _uiState.update {
                 val partial = prices.size < currencies.size
                 it.copy(
                     currentPrice = primaryValue ?: it.currentPrice,
                     pricesByCurrency = prices,
-                    lastUpdatedText = time,
+                    lastUpdatedText = primaryPoint?.let { p -> formatPriceTimestamp(p.timestamp) } ?: "—",
+                    dataSourceLabel = primaryPoint?.sourceLabel ?: it.dataSourceLabel,
+                    priceTypeLabel = primaryPoint?.let { p -> formatPriceType(p.priceType) } ?: it.priceTypeLabel,
                     parityWarning = false,
                     staleData = primaryValue == null,
                     quality = when {
