@@ -3,26 +3,13 @@ package com.goldpulse.util
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
-import com.github.mikephil.charting.charts.LineChart
 import java.io.File
 import java.io.FileOutputStream
-
-fun exportChartPng(context: Context, chart: LineChart, fileName: String = "goldpulse-chart-${System.currentTimeMillis()}.png"): Uri? {
-    val width = chart.width.takeIf { it > 0 } ?: chart.measuredWidth
-    val height = chart.height.takeIf { it > 0 } ?: chart.measuredHeight
-    if (width <= 0 || height <= 0) return null
-
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    chart.draw(canvas)
-    return exportChartPng(context, bitmap, fileName)
-}
 
 fun exportChartPng(context: Context, bitmap: Bitmap, fileName: String = "goldpulse-chart-${System.currentTimeMillis()}.png"): Uri? {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

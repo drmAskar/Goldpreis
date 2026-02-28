@@ -162,8 +162,9 @@ fun PriceChart(
             chart.axisRight.isEnabled = false
             chart.legend.isEnabled = true
             chart.legend.textSize = 10f
-            chart.setViewPortOffsets(56f, 24f, 24f, 56f)
-            chart.setExtraBottomOffset(8f)
+            // Keep a wider safe area so exported bitmaps preserve axis labels without clipping.
+            chart.setViewPortOffsets(72f, 28f, 28f, 76f)
+            chart.setExtraOffsets(8f, 4f, 8f, 12f)
 
             chart.xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM

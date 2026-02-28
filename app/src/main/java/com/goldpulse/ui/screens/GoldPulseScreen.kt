@@ -165,7 +165,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                         }
                         scope.launch {
                             val uri = withContext(Dispatchers.IO) {
-                                exportChartPng(context, chart)
+                                exportChartPng(context, chart.chartBitmap)
                             }
                             if (uri == null) {
                                 Toast.makeText(context, context.getString(R.string.export_failed), Toast.LENGTH_SHORT).show()
