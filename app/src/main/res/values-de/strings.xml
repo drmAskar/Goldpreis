@@ -2,6 +2,7 @@
     <string name="app_name">GoldPulse</string>
     <string name="title_trend">Trend</string>
     <string name="title_settings">Einstellungen</string>
+    <string name="hint_settings_save_required">Änderungen werden erst nach Tippen auf „Speichern“ übernommen.</string>
     <string name="open_settings">Einstellungen öffnen</string>
     <string name="last_update">Letztes Update: %1$s</string>
     <string name="label_threshold">Alarm-Schwelle %%</string>

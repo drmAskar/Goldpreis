@@ -14,11 +14,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -259,86 +262,111 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(text = stringResource(R.string.title_settings), style = MaterialTheme.typography.titleLarge)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.92f)
+                .imePadding()
+                .navigationBarsPadding()
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(text = stringResource(R.string.title_settings), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = stringResource(R.string.hint_settings_save_required),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            Text(text = stringResource(R.string.label_theme_color), style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                allThemes.forEach { theme ->
-                    val selected = selectedTheme == theme
-                    val color = when (theme) {
-                        "Blue" -> Color(0xFF1565C0)
-                        "Emerald" -> Color(0xFF00796B)
-                        "Dark" -> Color(0xFF424242)
-                        else -> Color(0xFF6750A4)
+                Text(text = stringResource(R.string.label_theme_color), style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    allThemes.forEach { theme ->
+                        val selected = selectedTheme == theme
+                        val color = when (theme) {
+                            "Blue" -> Color(0xFF1565C0)
+                            "Emerald" -> Color(0xFF00796B)
+                            "Dark" -> Color(0xFF424242)
+                            else -> Color(0xFF6750A4)
+                        }
+                        BoxChip(label = theme, color = color, selected = selected) { selectedTheme = theme }
                     }
-                    BoxChip(label = theme, color = color, selected = selected) { selectedTheme = theme }
                 }
-            }
 
-            Text(text = stringResource(R.string.label_currencies), style = MaterialTheme.typography.titleSmall)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                allCurrencies.forEach { currency ->
-                    FilterChip(
-                        selected = currency in selectedCurrencies,
-                        onClick = {
-                            if (currency in selectedCurrencies) selectedCurrencies.remove(currency)
-                            else selectedCurrencies.add(currency)
-                        },
-                        label = { Text(currency) }
-                    )
+                Text(text = stringResource(R.string.label_currencies), style = MaterialTheme.typography.titleSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    allCurrencies.forEach { currency ->
+                        FilterChip(
+                            selected = currency in selectedCurrencies,
+                            onClick = {
+                                if (currency in selectedCurrencies) selectedCurrencies.remove(currency)
+                                else selectedCurrencies.add(currency)
+                            },
+                            label = { Text(currency) }
+                        )
+                    }
                 }
+
+                OutlinedTextField(
+                    value = threshold,
+                    onValueChange = { threshold = it },
+                    label = { Text(stringResource(R.string.label_threshold)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = interval,
+                    onValueChange = { interval = it },
+                    label = { Text(stringResource(R.string.label_interval)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = alertAbove,
+                    onValueChange = { alertAbove = it },
+                    label = { Text(stringResource(R.string.label_alert_above)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = alertBelow,
+                    onValueChange = { alertBelow = it },
+                    label = { Text(stringResource(R.string.label_alert_below)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.label_background_notifications))
+                    Switch(checked = bgEnabled, onCheckedChange = { bgEnabled = it })
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.label_persistent_background))
+                    Switch(checked = persistentEnabled, onCheckedChange = { persistentEnabled = it })
+                }
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.label_show_moving_averages))
+                    Switch(checked = showMovingAverages, onCheckedChange = { showMovingAverages = it })
+                }
+                Text(
+                    text = stringResource(R.string.helper_show_moving_averages),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            OutlinedTextField(
-                value = threshold,
-                onValueChange = { threshold = it },
-                label = { Text(stringResource(R.string.label_threshold)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = interval,
-                onValueChange = { interval = it },
-                label = { Text(stringResource(R.string.label_interval)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = alertAbove,
-                onValueChange = { alertAbove = it },
-                label = { Text(stringResource(R.string.label_alert_above)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = alertBelow,
-                onValueChange = { alertBelow = it },
-                label = { Text(stringResource(R.string.label_alert_below)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.label_background_notifications))
-                Switch(checked = bgEnabled, onCheckedChange = { bgEnabled = it })
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.label_persistent_background))
-                Switch(checked = persistentEnabled, onCheckedChange = { persistentEnabled = it })
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.label_show_moving_averages))
-                Switch(checked = showMovingAverages, onCheckedChange = { showMovingAverages = it })
-            }
-            Text(
-                text = stringResource(R.string.helper_show_moving_averages),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
                 Button(
                     onClick = {
                         val currencies = selectedCurrencies.ifEmpty { mutableStateListOf("USD") }
@@ -357,11 +385,11 @@ private fun SettingsSheet(current: SettingsState, onDismiss: () -> Unit, onSave:
                                 alertBelowPrice = alertBelow.toDoubleOrNull()
                             )
                         )
-                    }
+                    },
+                    modifier = Modifier.weight(1f)
                 ) { Text(stringResource(R.string.action_save)) }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
             }
-            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }

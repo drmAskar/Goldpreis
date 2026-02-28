@@ -2,6 +2,7 @@
     <string name="app_name">GoldPulse</string>
     <string name="title_trend">الاتجاه</string>
     <string name="title_settings">الإعدادات</string>
+    <string name="hint_settings_save_required">لن تُطبَّق التغييرات إلا بعد الضغط على "حفظ".</string>
     <string name="open_settings">فتح الإعدادات</string>
     <string name="last_update">آخر تحديث: %1$s</string>
     <string name="label_threshold">نسبة التنبيه %%</string>

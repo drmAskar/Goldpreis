@@ -2,6 +2,7 @@
     <string name="app_name">GoldPulse</string>
     <string name="title_trend">Trend</string>
     <string name="title_settings">Settings</string>
+    <string name="hint_settings_save_required">Changes are applied only after you tap Save.</string>
     <string name="open_settings">Open settings</string>
     <string name="last_update">Last update: %1$s</string>
     <string name="label_threshold">Alert threshold %%</string>
