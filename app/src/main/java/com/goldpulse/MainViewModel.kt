@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.update
 import com.goldpulse.util.formatPriceTimestamp
 import com.goldpulse.util.formatPriceType
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 
 enum class DataQuality { LIVE, DELAYED, PARTIAL }
@@ -43,6 +45,7 @@ data class UiState(
     val insufficientIntradayData: Boolean = false,
     val alerts: List<PriceAlert> = emptyList(),
     val quality: DataQuality = DataQuality.DELAYED,
+    val lastUpdatedTimestamp: Long = 0L, // Unix timestamp for precise freshness tracking
     val error: String? = null
 )
 
@@ -50,21 +53,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = AppPreferences(app.applicationContext)
     private val repository = GoldRepositoryImpl(NetworkModule.api)
     private var currentTimeframe: Timeframe = Timeframe.DAY_1
-
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    private var autoRefreshJob: Job? = null
+    private var historyRefreshJob: Job? = null
 
     init {
         observeSettings()
         observeAlerts()
         observeLivePriceCache()
         refreshPrice()
+        startAutoRefresh()
     }
 
     private fun observeSettings() = viewModelScope.launch {
         prefs.settingsFlow.collect { settings ->
             _uiState.update { it.copy(settings = settings) }
             loadHistory(currentTimeframe)
+            // Restart auto-refresh with new interval
+            startAutoRefresh()
         }
     }
 
@@ -83,6 +90,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     currentPrice = latest.price,
                     pricesByCurrency = state.pricesByCurrency.toMutableMap().apply { put(primary, latest.price) },
                     lastUpdatedText = formatPriceTimestamp(latest.timestamp),
+                    lastUpdatedTimestamp = latest.timestamp,
                     dataSourceLabel = latest.sourceLabel ?: state.dataSourceLabel,
                     priceTypeLabel = formatPriceType(latest.priceType)
                 )
@@ -90,10 +98,40 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Start automatic refresh with configurable interval (default 60s for near real-time updates)
+     */
+    private fun startAutoRefresh() {
+        autoRefreshJob?.cancel()
+        historyRefreshJob?.cancel()
+        
+        val intervalMinutes = _uiState.value.settings.checkIntervalMinutes
+        // Use shorter interval for chart refresh (target <=60s)
+        val chartRefreshMs = 45_000L // 45 seconds for daily chart freshness
+        
+        autoRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(intervalMinutes * 60_000L)
+                refreshPrice()
+            }
+        }
+        
+        // Separate job for history refresh (more frequent for daily timeframe)
+        historyRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(chartRefreshMs)
+                // Silently refresh history for daily timeframe
+                if (currentTimeframe == Timeframe.DAY_1) {
+                    loadHistorySilent(currentTimeframe)
+                }
+            }
+        }
+    }
+
     fun refreshPrice() = viewModelScope.launch {
         if (_uiState.value.loading) return@launch
-
         _uiState.update { it.copy(loading = true, error = null) }
+
         runCatching {
             val settings = prefs.settingsFlow.first()
             val currencies = settings.currenciesCsv
@@ -105,6 +143,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
             val oldPrices = _uiState.value.pricesByCurrency
             val points = linkedMapOf<String, PricePoint>()
+
             currencies.forEach { c ->
                 val fetched = runCatching { repository.fetchCurrentPrice(c) }.getOrNull()
                 val fallback = oldPrices[c]?.let { PricePoint(price = it, timestamp = System.currentTimeMillis() / 1000) }
@@ -125,12 +164,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
             val prices = points.mapValues { it.value.price }
             val primaryValue = primaryPoint?.price
+
             _uiState.update {
                 val partial = prices.size < currencies.size
                 it.copy(
                     currentPrice = primaryValue ?: it.currentPrice,
                     pricesByCurrency = prices,
                     lastUpdatedText = primaryPoint?.let { p -> formatPriceTimestamp(p.timestamp) } ?: "—",
+                    lastUpdatedTimestamp = primaryPoint?.timestamp ?: it.lastUpdatedTimestamp,
                     dataSourceLabel = primaryPoint?.sourceLabel ?: it.dataSourceLabel,
                     priceTypeLabel = primaryPoint?.let { p -> formatPriceType(p.priceType) } ?: it.priceTypeLabel,
                     parityWarning = false,
@@ -153,6 +194,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
         }
+
         _uiState.update { it.copy(loading = false) }
     }
 
@@ -177,9 +219,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.update { it.copy(historyLoading = true) }
 
         val currency = _uiState.value.settings.currency
-        val history = runCatching {
-            repository.fetchHistoricalPrices(currency, timeframe)
-        }.getOrDefault(emptyList())
+        val history = runCatching { repository.fetchHistoricalPrices(currency, timeframe) }
+            .getOrDefault(emptyList())
             .distinctBy { it.timestamp }
             .sortedBy { it.timestamp }
 
@@ -206,14 +247,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Silent history refresh without loading indicator (for auto-refresh)
+     */
+    private fun loadHistorySilent(timeframe: Timeframe) = viewModelScope.launch {
+        val currency = _uiState.value.settings.currency
+        val history = runCatching { repository.fetchHistoricalPrices(currency, timeframe) }
+            .getOrDefault(emptyList())
+            .distinctBy { it.timestamp }
+            .sortedBy { it.timestamp }
+
+        if (history.isNotEmpty()) {
+            val now = System.currentTimeMillis() / 1000
+            val isStale = history.lastOrNull()?.let { abs(now - it.timestamp) > 48 * 60 * 60 } ?: false
+            val insufficientIntradayData = timeframe == Timeframe.DAY_1 && history.size < 2
+
+            _uiState.update {
+                it.copy(
+                    history = history,
+                    openPrice = history.firstOrNull()?.price ?: it.openPrice,
+                    highPrice = history.maxOfOrNull { p -> p.price } ?: it.highPrice,
+                    lowPrice = history.minOfOrNull { p -> p.price } ?: it.lowPrice,
+                    dailyChangePercent = computeDailyChangePercent(history),
+                    staleData = isStale,
+                    insufficientIntradayData = insufficientIntradayData
+                )
+            }
+        }
+    }
+
     private fun computeDailyChangePercent(history: List<PricePoint>): Double? {
         if (history.size < 2) return null
-
         val now = System.currentTimeMillis() / 1000
         val minAge = 20L * 60 * 60
         val maxAge = 28L * 60 * 60
-
         val latest = history.lastOrNull() ?: return null
+
         val candidate = history
             .dropLast(1)
             .map { point -> point to (now - point.timestamp) }
@@ -230,5 +299,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         prefs.updateSettings(settings)
         BackgroundModeController.apply(getApplication(), settings)
         loadHistory(currentTimeframe)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        autoRefreshJob?.cancel()
+        historyRefreshJob?.cancel()
     }
 }
