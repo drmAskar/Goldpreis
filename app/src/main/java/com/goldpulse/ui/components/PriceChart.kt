@@ -20,7 +20,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class Timeframe { DAY_1, WEEK_1, MONTH_1, MONTH_3, MONTH_6, YEAR_1, YEAR_5, MAX }
+enum class Timeframe {
+    DAY_1, WEEK_1, MONTH_1, MONTH_3, MONTH_6, YEAR_1, YEAR_5, MAX
+}
 
 private fun timeframeWindowSeconds(timeframe: Timeframe): Long? = when (timeframe) {
     Timeframe.DAY_1 -> 24L * 60 * 60
@@ -34,18 +36,23 @@ private fun timeframeWindowSeconds(timeframe: Timeframe): Long? = when (timefram
 }
 
 private fun segmentedHistory(history: List<PricePoint>, timeframe: Timeframe): List<PricePoint> {
-    if (history.isEmpty()) return emptyList()
-
+    // Handle empty or null data
+    if (history.isNullOrEmpty()) return emptyList()
+    
     val sorted = history.sortedBy { it.timestamp }
+    
+    // Apply time window filter
     val filtered = timeframeWindowSeconds(timeframe)?.let { window ->
         val minTimestamp = (System.currentTimeMillis() / 1000) - window
         sorted.filter { it.timestamp >= minTimestamp }
     } ?: sorted
 
+    // Determine base data with proper fallbacks
     val base = when {
         filtered.size >= 2 -> filtered
-        timeframe == Timeframe.DAY_1 -> filtered
+        timeframe == Timeframe.DAY_1 && sorted.size >= 2 -> sorted.takeLast(2)
         sorted.size >= 2 -> sorted.takeLast(600)
+        sorted.size == 1 -> sorted
         else -> sorted
     }
 
@@ -61,33 +68,46 @@ private fun segmentedHistory(history: List<PricePoint>, timeframe: Timeframe): L
 }
 
 private fun downsample(points: List<PricePoint>, maxPoints: Int): List<PricePoint> {
+    if (points.isNullOrEmpty()) return emptyList()
+    if (points.size <= 1) return points
     if (points.size <= maxPoints || maxPoints < 3) return points
+
     val sampled = ArrayList<PricePoint>(maxPoints)
     sampled += points.first()
+
     val buckets = maxPoints - 2
     val step = (points.size - 2).toFloat() / buckets
+
     for (i in 0 until buckets) {
         val index = 1 + (i * step).toInt().coerceIn(0, points.lastIndex - 1)
         sampled += points[index]
     }
+
     sampled += points.last()
     return sampled.distinctBy { it.timestamp }
 }
 
 private fun movingAverage(points: List<PricePoint>, period: Int): List<Double?> {
-    if (points.isEmpty()) return emptyList()
+    if (points.isNullOrEmpty() || points.size < 2) return emptyList()
+    if (period <= 0) return points.map { it.price }
+    
     val out = MutableList<Double?>(points.size) { null }
     var sum = 0.0
+
     points.forEachIndexed { index, p ->
         sum += p.price
-        if (index >= period) sum -= points[index - period].price
-        if (index >= period - 1) out[index] = sum / period
+        if (index >= period) {
+            sum -= points[index - period].price
+        }
+        if (index >= period - 1) {
+            out[index] = sum / period
+        }
     }
     return out
 }
 
 private fun hasDailyCadence(points: List<PricePoint>): Boolean {
-    if (points.size < 2) return false
+    if (points.isNullOrEmpty() || points.size < 2) return false
     val gaps = points.zipWithNext { a, b -> b.timestamp - a.timestamp }
     val avgGap = gaps.average()
     return avgGap >= 18L * 60 * 60
@@ -111,7 +131,18 @@ fun PriceChart(
         },
         update = { chart ->
             onChartReady(chart)
-            val entries = visibleHistory.mapIndexed { index, point -> Entry(index.toFloat(), point.price.toFloat()) }
+
+            if (visibleHistory.isNullOrEmpty() || visibleHistory.size < 2) {
+                chart.clear()
+                chart.setNoDataText(chart.context.getString(R.string.no_data_trend))
+                chart.invalidate()
+                return@AndroidView
+            }
+
+            val entries = visibleHistory.mapIndexed { index, point ->
+                Entry(index.toFloat(), point.price.toFloat())
+            }
+
             val mainSet = LineDataSet(entries, "Gold").apply {
                 color = Color.parseColor("#D4AF37")
                 valueTextColor = Color.TRANSPARENT
@@ -126,7 +157,9 @@ fun PriceChart(
             val ma50 = movingAverage(visibleHistory, 50)
             val ma200 = movingAverage(visibleHistory, 200)
 
-            val ma20Set = LineDataSet(ma20.mapIndexedNotNull { i, v -> v?.let { Entry(i.toFloat(), it.toFloat()) } }, "MA20").apply {
+            val ma20Set = LineDataSet(ma20.mapIndexedNotNull { i, v ->
+                v?.let { Entry(i.toFloat(), it.toFloat()) }
+            }, "MA20").apply {
                 color = Color.parseColor("#4CAF50")
                 valueTextColor = Color.TRANSPARENT
                 lineWidth = 1.4f
@@ -134,7 +167,10 @@ fun PriceChart(
                 mode = LineDataSet.Mode.LINEAR
                 setDrawValues(false)
             }
-            val ma50Set = LineDataSet(ma50.mapIndexedNotNull { i, v -> v?.let { Entry(i.toFloat(), it.toFloat()) } }, "MA50").apply {
+
+            val ma50Set = LineDataSet(ma50.mapIndexedNotNull { i, v ->
+                v?.let { Entry(i.toFloat(), it.toFloat()) }
+            }, "MA50").apply {
                 color = Color.parseColor("#2196F3")
                 valueTextColor = Color.TRANSPARENT
                 lineWidth = 1.3f
@@ -142,7 +178,10 @@ fun PriceChart(
                 mode = LineDataSet.Mode.LINEAR
                 setDrawValues(false)
             }
-            val ma200Set = LineDataSet(ma200.mapIndexedNotNull { i, v -> v?.let { Entry(i.toFloat(), it.toFloat()) } }, "MA200").apply {
+
+            val ma200Set = LineDataSet(ma200.mapIndexedNotNull { i, v ->
+                v?.let { Entry(i.toFloat(), it.toFloat()) }
+            }, "MA200").apply {
                 color = Color.parseColor("#9C27B0")
                 valueTextColor = Color.TRANSPARENT
                 lineWidth = 1.2f
@@ -163,7 +202,6 @@ fun PriceChart(
             chart.axisRight.isEnabled = false
             chart.legend.isEnabled = true
             chart.legend.textSize = 10f
-            // Keep a wider safe area so exported bitmaps preserve axis labels without clipping.
             chart.setViewPortOffsets(84f, 34f, 36f, 92f)
             chart.setExtraOffsets(14f, 8f, 14f, 18f)
 
@@ -195,7 +233,8 @@ fun PriceChart(
                 textSize = 11f
                 granularity = 1f
                 valueFormatter = object : ValueFormatter() {
-                    override fun getFormattedValue(value: Float): String = String.format(Locale.getDefault(), "%.0f", value)
+                    override fun getFormattedValue(value: Float): String = 
+                        String.format(Locale.getDefault(), "%.0f", value)
                 }
             }
 

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="gold">#D4AF37</color>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_save">Save</string>
+    <string name="action_share">Share</string>
+    <string name="app_name">GoldPulse</string>
+    <string name="data_source_label">Source: %1$s</string>
+    <string name="error_transparency">Sync error: %1$s</string>
+    <string name="export_chart">Export chart</string>
+    <string name="export_failed">Could not export chart image.</string>
+    <string name="export_unavailable">Chart is not ready yet.</string>
+    <string name="helper_show_moving_averages">Turn off to focus only on spot price movement.</string>
+    <string name="hint_settings_save_required">Changes are applied only after you tap Save.</string>
+    <string name="insufficient_intraday_data">Not enough remote 24h market data is available for 1D right now. Try again shortly.</string>
+    <string name="label_alert_above">Alert when price is above</string>
+    <string name="label_alert_below">Alert when price is below</string>
+    <string name="label_background_notifications">Periodic background notifications</string>
+    <string name="label_currencies">Currencies</string>
+    <string name="label_currency">Currency</string>
+    <string name="label_interval">Check interval (minutes)</string>
+    <string name="label_persistent_background">Persistent notification mode</string>
+    <string name="label_persistent_ticker">Show status-bar ticker (price + % change)</string>
+    <string name="label_show_moving_averages">Show moving averages (MA20/50/200)</string>
+    <string name="label_spot_price">Spot: %1$s</string>
+    <string name="label_theme_color">Theme color</string>
+    <string name="label_threshold">Alert threshold %%</string>
+    <string name="last_update">Last update: %1$s</string>
+    <string name="loading_history">Loading historical data…</string>
+    <string name="no_data_trend">No trend data yet</string>
+    <string name="notification_above_body">Current price %1$s is above threshold %2$s</string>
+    <string name="notification_below_body">Current price %1$s is below threshold %2$s</string>
+    <string name="notification_body">Price changed by %1$s%%. Current price: %2$s</string>
+    <string name="notification_channel_description">Price change alerts for gold</string>
+    <string name="notification_channel_name">Gold Alerts</string>
+    <string name="notification_persistent_body">%1$s • Updated %2$s</string>
+    <string name="notification_persistent_channel_description">Persistent gold price tracking notification</string>
+    <string name="notification_persistent_channel_name">GoldPulse Live Tracking</string>
+    <string name="notification_persistent_error">Could not refresh price. Retrying…</string>
+    <string name="notification_persistent_loading">Updating latest gold price…</string>
+    <string name="notification_persistent_ticker_body">%1$s %2$s %3$s • %4$s</string>
+    <string name="notification_persistent_title">GoldPulse live</string>
+    <string name="notification_title">Gold price alert</string>
+    <string name="open_settings">Open settings</string>
+    <string name="parity_warning">Currency parity warning: values are outside expected range.</string>
+    <string name="series_mismatch_warning">Some historical points were skipped due to currency mismatch. Refreshing usually resolves this.</string>
+    <string name="share_summary_line">Timeframe: %1$s</string>
+    <string name="share_text">GoldPulse\n%1$s\nLast update: %2$s</string>
+    <string name="share_title">Share prices</string>
+    <string name="stale_data_warning">Data may be stale. Last sync is older than expected.</string>
+    <string name="title_settings">Settings</string>
+    <string name="title_trend">Trend</string>
+    <style name="Theme.GoldPulse" parent="Theme.Material3.DayNight.NoActionBar"/>
+</resources>

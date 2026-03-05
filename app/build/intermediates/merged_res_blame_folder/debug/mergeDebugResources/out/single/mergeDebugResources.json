@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.goldpulse.app-debug-74:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.goldpulse.app-main-76:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.goldpulse.app-debug-74:/xml_file_paths.xml.flat",
+        "source": "com.goldpulse.app-main-76:/xml/file_paths.xml"
+    },
+    {
+        "merged": "com.goldpulse.app-debug-74:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.goldpulse.app-main-76:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.goldpulse.app-debug-74:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.goldpulse.app-main-76:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.goldpulse.app-debug-74:/xml_backup_rules.xml.flat",
+        "source": "com.goldpulse.app-main-76:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "com.goldpulse.app-debug-74:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.goldpulse.app-main-76:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    }
+]
