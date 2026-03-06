@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.abs
 
 class GoldRepositoryImpl(
@@ -17,6 +18,7 @@ class GoldRepositoryImpl(
     private val currentCache = ConcurrentHashMap<String, Pair<Long, PricePoint>>()
     private val historyCache = ConcurrentHashMap<String, Pair<Long, List<PricePoint>>>()
     private val dailySeriesCache = ConcurrentHashMap<String, Pair<Long, List<PricePoint>>>()
+    private val lastNetworkCallAtMs = AtomicLong(0L)
 
     // Cache duration constants - optimized for near real-time updates
     companion object {
@@ -26,13 +28,11 @@ class GoldRepositoryImpl(
         private const val MAX_RETRIES = 3
         private const val INITIAL_DELAY_MS = 250L
         private const val MAX_DELAY_MS = 1800L
+        private const val MIN_NETWORK_GAP_MS = 800L
     }
 
     override suspend fun fetchCurrentPrice(currency: String): PricePoint {
-        val normalizedCurrency = currency.uppercase()
-        // Validate currency input
-        require(normalizedCurrency.isNotBlank()) { "Currency cannot be blank" }
-        require(normalizedCurrency.length == 3 || normalizedCurrency == "USD") { "Invalid currency code: $normalizedCurrency" }
+        val normalizedCurrency = validateCurrency(currency)
 
         currentCache[normalizedCurrency]?.let { (ts, point) ->
             if (System.currentTimeMillis() - ts < CURRENT_PRICE_CACHE_MS) return point
@@ -84,10 +84,7 @@ class GoldRepositoryImpl(
     }
 
     override suspend fun fetchHistoricalPrices(currency: String, timeframe: Timeframe): List<PricePoint> {
-        val normalizedCurrency = currency.uppercase()
-        // Validate inputs
-        require(normalizedCurrency.isNotBlank()) { "Currency cannot be blank" }
-        require(timeframe != null) { "Timeframe cannot be null" }
+        val normalizedCurrency = validateCurrency(currency)
 
         val cacheKey = "$normalizedCurrency:${timeframe.name}"
         
@@ -162,6 +159,20 @@ class GoldRepositoryImpl(
         return result
     }
 
+    private fun validateCurrency(currency: String): String {
+        val normalized = currency.trim().uppercase()
+        require(normalized.matches(Regex("^[A-Z]{3}$"))) { "Invalid currency code" }
+        return normalized
+    }
+
+    private suspend fun throttleNetworkCalls() {
+        val now = System.currentTimeMillis()
+        val last = lastNetworkCallAtMs.get()
+        val waitMs = (MIN_NETWORK_GAP_MS - (now - last)).coerceAtLeast(0L)
+        if (waitMs > 0) delay(waitMs)
+        lastNetworkCallAtMs.set(System.currentTimeMillis())
+    }
+
     private suspend fun <T> retryWithBackoff(
         attempts: Int = MAX_RETRIES,
         initialDelayMs: Long = INITIAL_DELAY_MS,
@@ -170,6 +181,7 @@ class GoldRepositoryImpl(
     ): T? {
         var delayMs = initialDelayMs
         repeat(attempts) { index ->
+            throttleNetworkCalls()
             runCatching { return block() }
             if (index < attempts - 1) {
                 delay(delayMs)

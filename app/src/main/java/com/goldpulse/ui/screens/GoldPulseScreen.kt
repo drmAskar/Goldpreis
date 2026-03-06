@@ -165,11 +165,11 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                             viewModel.onTimeframeChanged(it)
                         },
                         onChartReady = { chartRef = it },
-                        onQuickExport = {
+                        onExport = {
                             val chart = chartRef ?: return@ChartsTab
                             scope.launch {
                                 val uri = withContext(Dispatchers.IO) {
-                                    exportChartPng(context, renderChartForExport(chart, ExportMode.QUICK))
+                                    exportChartPng(context, renderChartForExport(chart, ExportMode.FULL), "goldpulse-chart-${System.currentTimeMillis()}.png")
                                 }
                                 if (uri == null) Toast.makeText(context, context.getString(R.string.export_failed), Toast.LENGTH_SHORT).show()
                                 else {
@@ -178,24 +178,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                                         putExtra(Intent.EXTRA_STREAM, uri)
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Quick export"))
-                                }
-                            }
-                        },
-                        onFullExport = {
-                            val chart = chartRef ?: return@ChartsTab
-                            scope.launch {
-                                val uri = withContext(Dispatchers.IO) {
-                                    exportChartPng(context, renderChartForExport(chart, ExportMode.FULL), "goldpulse-chart-full-${System.currentTimeMillis()}.png")
-                                }
-                                if (uri == null) Toast.makeText(context, context.getString(R.string.export_failed), Toast.LENGTH_SHORT).show()
-                                else {
-                                    val intent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "image/png"
-                                        putExtra(Intent.EXTRA_STREAM, uri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(Intent.createChooser(intent, "Full export"))
+                                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.export_chart)))
                                 }
                             }
                         }
@@ -227,8 +210,7 @@ private fun Header(source: String, updated: String, priceType: String, quality: 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column {
             Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            // Arabic label "آخر تحديث" for last update time
-            Text(text = "آخر تحديث: ${updated.ifBlank { "—" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = stringResource(R.string.last_update, updated.ifBlank { "—" }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(text = stringResource(R.string.data_source_label, source.ifBlank { "—" }), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(text = "Price type: ${priceType.ifBlank { "—" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -276,17 +258,20 @@ private fun ChartsTab(
     selectedTimeframe: Timeframe,
     onTimeframeSelected: (Timeframe) -> Unit,
     onChartReady: (LineChart) -> Unit,
-    onQuickExport: () -> Unit,
-    onFullExport: () -> Unit
+    onExport: () -> Unit
 ) {
     Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.title_trend), style = MaterialTheme.typography.titleMedium)
             TimeframeSelector(selectedTimeframe, onTimeframeSelected)
+            Text(
+                text = stringResource(R.string.last_update, state.lastUpdatedText.ifBlank { "—" }),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             PriceChart(history = state.history, timeframe = selectedTimeframe, showMovingAverages = state.settings.showMovingAverages, onChartReady = onChartReady)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onQuickExport) { Text("Quick Export") }
-                Button(onClick = onFullExport) { Text("Full Export") }
+            Button(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.export_chart))
             }
             if (selectedTimeframe == Timeframe.DAY_1 && state.insufficientIntradayData) {
                 Text(stringResource(R.string.insufficient_intraday_data), color = MaterialTheme.colorScheme.onSurfaceVariant)

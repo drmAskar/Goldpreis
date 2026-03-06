@@ -228,8 +228,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val isStale = history.lastOrNull()?.let { abs(now - it.timestamp) > 48 * 60 * 60 } ?: false
         val insufficientIntradayData = timeframe == Timeframe.DAY_1 && history.size < 2
 
-        _uiState.update {
-            it.copy(
+        _uiState.update { state ->
+            val latestHistoryTs = history.lastOrNull()?.timestamp ?: state.lastUpdatedTimestamp
+            val effectiveTs = maxOf(state.lastUpdatedTimestamp, latestHistoryTs)
+            state.copy(
                 historyLoading = false,
                 history = history,
                 openPrice = history.firstOrNull()?.price,
@@ -238,8 +240,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 dailyChangePercent = computeDailyChangePercent(history),
                 staleData = isStale,
                 insufficientIntradayData = insufficientIntradayData,
+                lastUpdatedTimestamp = effectiveTs,
+                lastUpdatedText = if (effectiveTs > 0) formatPriceTimestamp(effectiveTs) else state.lastUpdatedText,
                 quality = when {
-                    it.quality == DataQuality.PARTIAL -> DataQuality.PARTIAL
+                    state.quality == DataQuality.PARTIAL -> DataQuality.PARTIAL
                     insufficientIntradayData || isStale -> DataQuality.DELAYED
                     else -> DataQuality.LIVE
                 }
@@ -262,15 +266,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val isStale = history.lastOrNull()?.let { abs(now - it.timestamp) > 48 * 60 * 60 } ?: false
             val insufficientIntradayData = timeframe == Timeframe.DAY_1 && history.size < 2
 
-            _uiState.update {
-                it.copy(
+            _uiState.update { state ->
+                val latestHistoryTs = history.lastOrNull()?.timestamp ?: state.lastUpdatedTimestamp
+                val effectiveTs = maxOf(state.lastUpdatedTimestamp, latestHistoryTs)
+                state.copy(
                     history = history,
-                    openPrice = history.firstOrNull()?.price ?: it.openPrice,
-                    highPrice = history.maxOfOrNull { p -> p.price } ?: it.highPrice,
-                    lowPrice = history.minOfOrNull { p -> p.price } ?: it.lowPrice,
+                    openPrice = history.firstOrNull()?.price ?: state.openPrice,
+                    highPrice = history.maxOfOrNull { p -> p.price } ?: state.highPrice,
+                    lowPrice = history.minOfOrNull { p -> p.price } ?: state.lowPrice,
                     dailyChangePercent = computeDailyChangePercent(history),
                     staleData = isStale,
-                    insufficientIntradayData = insufficientIntradayData
+                    insufficientIntradayData = insufficientIntradayData,
+                    lastUpdatedTimestamp = effectiveTs,
+                    lastUpdatedText = if (effectiveTs > 0) formatPriceTimestamp(effectiveTs) else state.lastUpdatedText
                 )
             }
         }

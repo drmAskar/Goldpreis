@@ -103,3 +103,33 @@ feat: add auto-refresh mechanism for daily chart (target <=60s)
 feat: display last update time in Arabic (آخر تحديث)
 test: add freshness logic and cache invalidation tests
 ```
+
+---
+
+## تحديث إنقاذي إضافي (2026-03-06)
+
+### الأسباب الجذرية المكتشفة
+1. واجهة المخطط كانت تعرض زرين تصدير (Quick/Full) بشكل يربك المستخدم.
+2. وقت آخر تحديث لم يكن يُحدَّث دائماً من أحدث نقطة في السلسلة التاريخية.
+3. قصّ/تداخل في تسميات المحاور (خصوصاً Y) على الشاشة وعند التصدير.
+4. إعدادات الشبكة كانت تسمح بسجلات شبكية في غير وضع التطوير ودون تقييد صارم للمضيفين.
+
+### الإصلاحات المطبقة
+- **Live/Refresh:** تثبيت تحديث المخطط اليومي الدوري (<=60 ثانية فعلياً عبر دورة 45 ثانية) مع مزامنة `last_updated` من أحدث نقطة تاريخية.
+- **UI:**
+  - الإبقاء على **زر تصدير واحد فقط** (Export chart).
+  - عرض `Last update` داخل تبويب Charts أيضاً.
+  - تحسين حدود الرسم لمنع التداخل وقصّ التسميات.
+- **Export/Chart:**
+  - تحسين حساب الهوامش اليسرى/اليمنى ديناميكياً حسب عرض تسميات Y.
+  - تحسين تجنب قصّ أول/آخر تسميات X.
+  - تنسيق Y بصيغة مختصرة (K/M) لتقليل احتمالات القصّ.
+- **Security:**
+  - إيقاف logging الشبكي في release (`Level.NONE`) والإبقاء على Basic في debug فقط.
+  - فرض HTTPS فقط + قائمة مضيفين مسموحين (gold-api/frankfurter/stooq).
+  - تفعيل `usesCleartextTraffic=false` و `network_security_config`.
+  - إضافة تحقق إدخال أقوى لرمز العملة + تهدئة/حدّ أدنى للفاصل بين طلبات الشبكة (rate throttling).
+
+### التحقق السريع
+- الأوامر المنفذة: `./gradlew testDebugUnitTest assembleDebug` ثم `./gradlew :app:compileDebugKotlin --no-daemon`.
+- النتيجة: فشل بيئي خارجي في AAPT2 (`Daemon startup failed`) قبل إكمال مرحلة الموارد، وليس فشل منطق التعديلات.

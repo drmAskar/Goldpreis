@@ -45,14 +45,16 @@ private fun renderWithSafeBounds(chart: LineChart, mode: ExportMode, extraRightP
     val originalRight = chart.extraRightOffset
     val originalBottom = chart.extraBottomOffset
 
-    val yLabelWidth = measureYAxisMaxLabelWidth(chart)
+    val leftYLabelWidth = measureAxisLabelWidth(chart.axisLeft)
+    val rightYLabelWidth = if (chart.axisRight.isEnabled) measureAxisLabelWidth(chart.axisRight) else 0f
     val xRotatedHeight = measureXAxisRotatedLabelHeight(chart)
 
-    val rightPadding = max(originalRight, yLabelWidth + if (mode == ExportMode.FULL) 36f else 24f + extraRightPadding)
+    val leftPadding = max(originalLeft, leftYLabelWidth + if (mode == ExportMode.FULL) 28f else 22f)
+    val rightPadding = max(originalRight, rightYLabelWidth + if (mode == ExportMode.FULL) 36f else 24f + extraRightPadding)
     val bottomPadding = max(originalBottom, xRotatedHeight + if (mode == ExportMode.FULL) 34f else 24f)
 
     chart.setExtraOffsets(
-        max(originalLeft, 16f),
+        leftPadding,
         max(originalTop, 12f),
         rightPadding,
         bottomPadding
@@ -84,12 +86,8 @@ private fun renderWithSafeBounds(chart: LineChart, mode: ExportMode, extraRightP
     return result
 }
 
-private fun measureYAxisMaxLabelWidth(chart: LineChart): Float {
-    val axis = when {
-        chart.axisRight.isEnabled -> chart.axisRight
-        chart.axisLeft.isEnabled -> chart.axisLeft
-        else -> chart.axisLeft
-    }
+private fun measureAxisLabelWidth(axis: YAxis): Float {
+    if (!axis.isEnabled) return 0f
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = axis.textSize

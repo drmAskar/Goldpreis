@@ -19,6 +19,7 @@ import com.goldpulse.data.model.PricePoint
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 enum class Timeframe {
     DAY_1, WEEK_1, MONTH_1, MONTH_3, MONTH_6, YEAR_1, YEAR_5, MAX
@@ -113,6 +114,15 @@ private fun hasDailyCadence(points: List<PricePoint>): Boolean {
     return avgGap >= 18L * 60 * 60
 }
 
+private fun formatYAxisValue(value: Float): String {
+    val absValue = abs(value)
+    return when {
+        absValue >= 1_000_000f -> String.format(Locale.getDefault(), "%.1fM", value / 1_000_000f)
+        absValue >= 1_000f -> String.format(Locale.getDefault(), "%.1fK", value / 1_000f)
+        else -> String.format(Locale.getDefault(), "%.0f", value)
+    }
+}
+
 @Composable
 fun PriceChart(
     history: List<PricePoint>,
@@ -202,8 +212,8 @@ fun PriceChart(
             chart.axisRight.isEnabled = false
             chart.legend.isEnabled = true
             chart.legend.textSize = 10f
-            chart.setViewPortOffsets(84f, 34f, 36f, 92f)
-            chart.setExtraOffsets(14f, 8f, 14f, 18f)
+            chart.setViewPortOffsets(104f, 34f, 40f, 98f)
+            chart.setExtraOffsets(20f, 10f, 16f, 20f)
 
             chart.xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
@@ -212,6 +222,7 @@ fun PriceChart(
                 labelRotationAngle = -20f
                 labelCount = 4
                 granularity = 1f
+                setAvoidFirstLastClipping(true)
                 valueFormatter = object : ValueFormatter() {
                     override fun getFormattedValue(value: Float): String {
                         val index = value.toInt().coerceIn(0, (visibleHistory.size - 1).coerceAtLeast(0))
@@ -233,8 +244,7 @@ fun PriceChart(
                 textSize = 11f
                 granularity = 1f
                 valueFormatter = object : ValueFormatter() {
-                    override fun getFormattedValue(value: Float): String = 
-                        String.format(Locale.getDefault(), "%.0f", value)
+                    override fun getFormattedValue(value: Float): String = formatYAxisValue(value)
                 }
             }
 
