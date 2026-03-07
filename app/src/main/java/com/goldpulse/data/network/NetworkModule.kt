@@ -21,13 +21,11 @@ object NetworkModule {
         "stooq.com"
     )
 
-    companion object {
-        private const val CONNECT_TIMEOUT_SECONDS = 15L
-        private const val READ_TIMEOUT_SECONDS = 15L
-        private const val CALL_TIMEOUT_SECONDS = 20L
-        private const val CACHE_SIZE_BYTES = 15L * 1024 * 1024
-        private const val IDLE_CONNECTION_SECONDS = 30L
-    }
+    private const val CONNECT_TIMEOUT_SECONDS = 15L
+    private const val READ_TIMEOUT_SECONDS = 15L
+    private const val CALL_TIMEOUT_SECONDS = 20L
+    private const val CACHE_SIZE_BYTES = 15L * 1024 * 1024
+    private const val IDLE_CONNECTION_SECONDS = 30L
 
     private val logging by lazy {
         HttpLoggingInterceptor().apply {
