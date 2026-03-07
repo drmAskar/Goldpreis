@@ -1,6 +1,6 @@
 package com.goldpulse.data.network
 
-import com.goldpulse.app.BuildConfig
+import com.goldpulse.BuildConfig
 import okhttp3.Cache
 import okhttp3.ConnectionPool
 import okhttp3.HttpUrl
