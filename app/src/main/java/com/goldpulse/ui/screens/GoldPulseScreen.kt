@@ -29,7 +29,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
@@ -91,7 +92,7 @@ private val allCurrencies = listOf("USD", "EUR", "GBP", "AED", "TRY", "SAR")
 private val allThemes = listOf("Purple", "Blue", "Emerald", "Dark")
 private val intervalOptions = listOf(1, 5, 10, 15)
 
-enum class MainTab { HOME, CHARTS, ALERTS, SETTINGS }
+enum class MainTab { HOME, CHARTS, PREDICTION, ALERTS, SETTINGS }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -116,6 +117,7 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
             NavigationBar {
                 NavigationBarItem(selected = tab == MainTab.HOME, onClick = { tab = MainTab.HOME }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
                 NavigationBarItem(selected = tab == MainTab.CHARTS, onClick = { tab = MainTab.CHARTS }, icon = { Icon(Icons.Default.Refresh, null) }, label = { Text("Charts") })
+                NavigationBarItem(selected = tab == MainTab.PREDICTION, onClick = { tab = MainTab.PREDICTION }, icon = { Icon(Icons.Default.TrendingUp, null) }, label = { Text("Prediction") })
                 NavigationBarItem(selected = tab == MainTab.ALERTS, onClick = { tab = MainTab.ALERTS }, icon = { Icon(Icons.Default.Notifications, null) }, label = { Text("Alerts") })
                 NavigationBarItem(selected = tab == MainTab.SETTINGS, onClick = { tab = MainTab.SETTINGS }, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
             }
@@ -184,7 +186,11 @@ fun GoldPulseScreen(viewModel: MainViewModel) {
                         }
                     )
 
-                    MainTab.ALERTS -> AlertsTab(
+                    MainTab.PREDICTION -> PredictionScreen(
+                    state = state.predictionState,
+                    onRefresh = viewModel::refreshPrediction
+                )
+                MainTab.ALERTS -> AlertsTab(
                         currentCurrency = currency,
                         alerts = state.alerts,
                         onAddAlert = viewModel::addAlert,

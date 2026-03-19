@@ -51,4 +51,37 @@
     <string name="notification_above_body">Current price %1$s is above threshold %2$s</string>
     <string name="notification_below_body">Current price %1$s is below threshold %2$s</string>
     <string name="insufficient_intraday_data">Not enough remote 24h market data is available for 1D right now. Try again shortly.</string>
+    
+    <!-- Prediction Screen Strings -->
+    <string name="title_prediction">Gold Prediction</string>
+    <string name="prediction_score">Prediction Score</string>
+    <string name="prediction_bullish">Bullish</string>
+    <string name="prediction_neutral">Neutral</string>
+    <string name="prediction_bearish">Bearish</string>
+    <string name="prediction_bullish_desc">Conditions favorable for gold price increase</string>
+    <string name="prediction_neutral_desc">Mixed signals, no clear direction</string>
+    <string name="prediction_bearish_desc">Conditions indicate gold price decrease</string>
+    <string name="factor_distribution">Factor Distribution</string>
+    <string name="current_indicators">Current Indicators</string>
+    <string name="forecast_chart">Chart with Forecast Band</string>
+    <string name="ma_label">MA</string>
+    <string name="std_label">Std</string>
+    <string name="upper_band">Upper Band</string>
+    <string name="lower_band">Lower Band</string>
+    <string name="dxy_label">Dollar Index</string>
+    <string name="us10y_label">10Y Yield</string>
+    <string name="breakeven_label">Inflation Expectation</string>
+    <string name="vix_label">Fear Index</string>
+    <string name="no_data_available">No data available</string>
+    <string name="chart_needs_data">Chart needs at least 30 data points</string>
+    <string name="gold_chart_label">Gold</string>
+    <string name="upper_band_label">Upper Band</string>
+    <string name="lower_band_label">Lower Band</string>
+    <string name="ma_chart_label">MA</string>
+    
+    <!-- Prediction Documentation -->
+    <string name="prediction_formula_title">Prediction Formula</string>
+    <string name="prediction_formula_desc">Gold score is calculated as a weighted sum of normalized factor scores:\n\nScore = Σ (Factor Weight × Normalized Factor Score)\n\n• DXY (35%): Inverse correlation - Lower dollar boosts gold\n• US10Y (30%): Inverse correlation - Lower yields boost gold\n• Breakeven (20%): Positive correlation - Higher inflation expectations boost gold\n• VIX (15%): Positive correlation - Higher fear boosts gold</string>
+    <string name="prediction_sources_title">Data Sources</string>
+    <string name="prediction_sources_desc">• DXY: FRED (DTWEXBGS) or Yahoo Finance\n• US10Y: FRED (DGS10) or Yahoo Finance (^TNX)\n• Breakeven10Y: FRED (T10YIE)\n• VIX: Yahoo Finance (^VIX)</string>
 </resources>

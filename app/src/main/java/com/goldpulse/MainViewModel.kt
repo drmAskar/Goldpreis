@@ -7,9 +7,11 @@ import com.goldpulse.data.local.AlertDirection
 import com.goldpulse.data.local.AppPreferences
 import com.goldpulse.data.local.PriceAlert
 import com.goldpulse.data.local.SettingsState
+import com.goldpulse.data.model.PredictionState
 import com.goldpulse.data.model.PricePoint
 import com.goldpulse.data.network.NetworkModule
 import com.goldpulse.data.repository.GoldRepositoryImpl
+import com.goldpulse.domain.PredictionEngine
 import com.goldpulse.service.BackgroundModeController
 import com.goldpulse.ui.components.Timeframe
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,12 +48,14 @@ data class UiState(
     val alerts: List<PriceAlert> = emptyList(),
     val quality: DataQuality = DataQuality.DELAYED,
     val lastUpdatedTimestamp: Long = 0L, // Unix timestamp for precise freshness tracking
-    val error: String? = null
+    val error: String? = null,
+    val predictionState: PredictionState = PredictionState()
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = AppPreferences(app.applicationContext)
     private val repository = GoldRepositoryImpl(NetworkModule.api)
+    private val predictionEngine = PredictionEngine()
     private var currentTimeframe: Timeframe = Timeframe.DAY_1
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -307,6 +311,39 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         prefs.updateSettings(settings)
         BackgroundModeController.apply(getApplication(), settings)
         loadHistory(currentTimeframe)
+    }
+
+    /**
+     * Refresh prediction data - fetch indicators and calculate prediction score.
+     */
+    fun refreshPrediction() = viewModelScope.launch {
+        _uiState.update { it.copy(predictionState = it.predictionState.copy(loading = true, error = null)) }
+        
+        runCatching {
+            val goldHistory = _uiState.value.history
+            val prediction = predictionEngine.fetchAndCalculate(goldHistory)
+            
+            _uiState.update { state ->
+                state.copy(
+                    predictionState = PredictionState(
+                        loading = false,
+                        prediction = prediction,
+                        goldHistory = goldHistory,
+                        error = null,
+                        lastUpdated = formatPriceTimestamp(System.currentTimeMillis() / 1000)
+                    )
+                )
+            }
+        }.onFailure { e ->
+            _uiState.update { state ->
+                state.copy(
+                    predictionState = state.predictionState.copy(
+                        loading = false,
+                        error = e.message ?: "Failed to fetch prediction data"
+                    )
+                )
+            }
+        }
     }
 
     override fun onCleared() {

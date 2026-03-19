@@ -2,6 +2,7 @@
     <string name="app_name">GoldPulse</string>
     <string name="title_trend">الاتجاه</string>
     <string name="title_settings">الإعدادات</string>
+    <string name="title_prediction">تنبؤ الذهب</string>
     <string name="hint_settings_save_required">لن تُطبَّق التغييرات إلا بعد الضغط على "حفظ".</string>
     <string name="open_settings">فتح الإعدادات</string>
     <string name="last_update">آخر تحديث: %1$s</string>
@@ -23,12 +24,10 @@
     <string name="share_title">مشاركة الأسعار</string>
     <string name="share_text">GoldPulse\n%1$s\nآخر تحديث: %2$s</string>
     <string name="no_data_trend">لا توجد بيانات اتجاه بعد</string>
-
     <string name="notification_channel_name">تنبيهات الذهب</string>
     <string name="notification_channel_description">تنبيهات تغير سعر الذهب</string>
     <string name="notification_title">تنبيه سعر الذهب</string>
     <string name="notification_body">تغير السعر بنسبة %1$s%%. السعر الحالي: %2$s</string>
-
     <string name="notification_persistent_channel_name">تتبع GoldPulse المباشر</string>
     <string name="notification_persistent_channel_description">إشعار دائم لتتبع سعر الذهب</string>
     <string name="notification_persistent_title">GoldPulse مباشر</string>
@@ -47,4 +46,36 @@
     <string name="notification_above_body">السعر الحالي %1$s أعلى من الحد %2$s</string>
     <string name="notification_below_body">السعر الحالي %1$s أقل من الحد %2$s</string>
     <string name="insufficient_intraday_data">لا تتوفر حاليًا بيانات سوق بعيدة كافية لآخر 24 ساعة لعرض 1D. حاول مرة أخرى بعد قليل.</string>
+    
+    <!-- Prediction Screen Strings -->
+    <string name="prediction_score">درجة التنبؤ</string>
+    <string name="prediction_bullish">صاعد</string>
+    <string name="prediction_neutral">محايد</string>
+    <string name="prediction_bearish">هابط</string>
+    <string name="prediction_bullish_desc">الظروف مواتية لارتفاع سعر الذهب</string>
+    <string name="prediction_neutral_desc">إشارات مختلطة، لا اتجاه واضح</string>
+    <string name="prediction_bearish_desc">الظروف تشير إلى انخفاض سعر الذهب</string>
+    <string name="factor_distribution">توزيع العوامل</string>
+    <string name="current_indicators">المؤشرات الحالية</string>
+    <string name="forecast_chart">الرسم البياني مع نطاق التنبؤ</string>
+    <string name="ma_label">المتوسط</string>
+    <string name="std_label">الانحراف المعياري</string>
+    <string name="upper_band">الحد الأعلى</string>
+    <string name="lower_band">الحد الأدنى</string>
+    <string name="dxy_label">مؤشر الدولار</string>
+    <string name="us10y_label">عائد 10 سنوات</string>
+    <string name="breakeven_label">توقعات التضخم</string>
+    <string name="vix_label">مؤشر الخوف</string>
+    <string name="no_data_available">لا توجد بيانات متاحة</string>
+    <string name="chart_needs_data">يحتاج الرسم البياني إلى 30 نقطة بيانات على الأقل</string>
+    <string name="gold_chart_label">الذهب</string>
+    <string name="upper_band_label">الحد الأعلى</string>
+    <string name="lower_band_label">الحد الأدنى</string>
+    <string name="ma_chart_label">المتوسط</string>
+    
+    <!-- Prediction Documentation -->
+    <string name="prediction_formula_title">معادلة التنبؤ</string>
+    <string name="prediction_formula_desc">حساب درجة الذهب كمجموع مرجح للنتائج الطبيعية:\n\nالدرجة = Σ (وزن العامل × النتيجة الطبيعية)\n\n• DXY (35%): علاقة عكسية - انخفاض الدولار يرفع الذهب\n• US10Y (30%): علاقة عكسية - انخفاض العائد يرفع الذهب\n• التضخم المتوقع (20%): علاقة طردية - ارتفاع التضخم يرفع الذهب\n• VIX (15%): علاقة طردية - ارتفاع الخوف يرفع الذهب</string>
+    <string name="prediction_sources_title">مصادر البيانات</string>
+    <string name="prediction_sources_desc">• DXY: FRED (DTWEXBGS) أو Yahoo Finance\n• US10Y: FRED (DGS10) أو Yahoo Finance (^TNX)\n• التضخم المتوقع: FRED (T10YIE)\n• VIX: Yahoo Finance (^VIX)</string>
 </resources>
