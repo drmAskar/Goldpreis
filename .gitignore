@@ -7,3 +7,12 @@
 /captures
 .externalNativeBuild
 .cxx
+
+# Android Studio and Gradle
+.gradle/
+/local.properties
+.DS_Store
+build/
+app/build/
+.idea/
+
